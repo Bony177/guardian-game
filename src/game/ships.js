@@ -1,11 +1,50 @@
 // ships.js
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+
+const gltfLoader = new GLTFLoader();
+
+
+
 
 // ================= CONFIG =================
 const SHIELD_CENTER = new THREE.Vector3(0, -5, -10);
 const SHIELD_RADIUS = 13;
 
 const MAX_ACTIVE_SHIPS = 4;
+
+
+//--------------------ships model----------------
+const SHIP_TYPES = {
+  1: {
+    maxHealth: 30,
+    points: 10,
+    weight: 0.5,
+    model: "/models/fs1.glb",
+    scale: 1.2,
+  },
+  2: {
+    maxHealth: 60,
+    points: 25,
+    weight: 0.35,
+    model: "/models/fs2.glb",
+    scale: 1.6,
+  },
+  3: {
+    maxHealth: 120,
+    points: 60,
+    weight: 0.15,
+    model: "/models/fs3.glb",
+    scale: 2.2,
+  },
+};
+
+
+
+// ================= position gun =================
+const GUN_POSITION = new THREE.Vector3(0, 0, 12); // same as gun base
+const MIN_GUN_DISTANCE = 12; // tweak this
+
 
 // ================= STATE =================
 let shipIdCounter = 0;
@@ -14,12 +53,12 @@ let score = 0;
 
 const shipsDestroyedByType = { 1: 0, 2: 0, 3: 0 };
 
+
+
+let spawnTimer = 0;
+const SPAWN_INTERVAL = 1200; // milliseconds
+
 // ================= SHIP TYPES =================
-const SHIP_TYPES = {
-  1: { maxHealth: 30, points: 10, color: 0xff5555, weight: 0.5 },
-  2: { maxHealth: 60, points: 25, color: 0xffaa00, weight: 0.35 },
-  3: { maxHealth: 120, points: 60, color: 0xaa55ff, weight: 0.15 },
-};
 
 // ================= SPAWN POINTS =================
 const spawnPoints = [];
@@ -39,30 +78,50 @@ for (let i = 0; i < 9; i++) {
 function pickShipType() {
   const r = Math.random();
   let acc = 0;
+
   for (const key in SHIP_TYPES) {
     acc += SHIP_TYPES[key].weight;
-    if (r <= acc) return SHIP_TYPES[key];
+    if (r <= acc) return Number(key);
   }
-  return SHIP_TYPES[1];
+  return 1;
 }
 
 
 export function spawnShip(scene) {
+  const typeId = pickShipType();
+  const type = SHIP_TYPES[typeId];
+
+  
   if (activeShips.length >= MAX_ACTIVE_SHIPS) return;
 
-  const free = spawnPoints.filter(s => !s.isOccupied);
+  const free = spawnPoints.filter(s => {
+  if (s.isOccupied) return false;
+
+  const distanceToGun = s.position.distanceTo(GUN_POSITION);
+  return distanceToGun > MIN_GUN_DISTANCE;
+});
+
   if (!free.length) return;
 
   const spawn = free[Math.floor(Math.random() * free.length)];
-  const type = pickShipType();
 
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1.5, 1, 3),
-    new THREE.MeshStandardMaterial({ color: type.color }),
-  );
+  gltfLoader.load(type.model, (gltf) => {
+  const mesh = gltf.scene;
 
+  mesh.scale.setScalar(type.scale);
   mesh.position.copy(spawn.position);
+
+  // IMPORTANT: face shield / vault
   mesh.lookAt(SHIELD_CENTER);
+
+  // shadows
+  mesh.traverse(child => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+
   scene.add(mesh);
 
   const healthBar = new THREE.Mesh(
@@ -72,64 +131,60 @@ export function spawnShip(scene) {
   healthBar.position.set(0, 1.5, 0);
   mesh.add(healthBar);
 
-  const ship = {
-  id: shipIdCounter++,
-  mesh,
-  healthBar,
-  health: type.maxHealth,
-  maxHealth: type.maxHealth,
-  points: type.points,
-  spawn,
-  state: "alive",        // 👈 NEW
-  fallSpeed: 0,           // 👈 NEW
-  rotateSpeed: THREE.MathUtils.randFloat(-0.05, 0.05), // 👈 OPTIONAL
-  moveDir: new THREE.Vector3(
-    THREE.MathUtils.randFloat(-0.01, 0.01),
-    0,
-    THREE.MathUtils.randFloat(-0.01, 0.01),
-  ),
-};
+    const ship = {
+      id: shipIdCounter++,
+      mesh,
+      healthBar,
+      health: type.maxHealth,
+      maxHealth: type.maxHealth,
+      points: type.points,
+      spawn,
+      type: typeId,
+      state: "alive",
+      fallSpeed: 0,
+      rotateSpeed: THREE.MathUtils.randFloat(-0.05, 0.05),
+      moveDir: new THREE.Vector3(
+        THREE.MathUtils.randFloat(-0.01, 0.01),
+        0,
+        THREE.MathUtils.randFloat(-0.01, 0.01),
+      ),
+    };
 
   spawn.isOccupied = true;
   activeShips.push(ship);
+  });
 }
 
 
-export function updateShips(camera, scene) {
+export function updateShips(camera, scene, delta) {
+  spawnTimer += delta;
+
+  if (spawnTimer > SPAWN_INTERVAL && activeShips.length < MAX_ACTIVE_SHIPS) {
+    spawnShip(scene);
+    spawnTimer = 0;
+  }
+
   for (let i = activeShips.length - 1; i >= 0; i--) {
     const ship = activeShips[i];
 
     if (ship.state === "alive") {
-      // normal movement
       ship.mesh.position.add(ship.moveDir);
-
-      // tiny float
       ship.mesh.position.y += Math.sin(Date.now() * 0.002) * 0.002;
-
       ship.healthBar.lookAt(camera.position);
-    }
-
+    } 
     else if (ship.state === "dying") {
-      // 👇 FREE FALL
       ship.mesh.position.y -= ship.fallSpeed;
-      ship.fallSpeed += 0.005; // gravity feel
-
-      // optional spin
+      ship.fallSpeed += 0.005;
       ship.mesh.rotation.x += ship.rotateSpeed;
       ship.mesh.rotation.z += ship.rotateSpeed;
 
-      // 👇 DISAPPEAR CONDITION
       if (ship.mesh.position.y < -30) {
         destroyShip(ship, scene);
       }
     }
   }
-
-  // keep spawning if slots free
-  if (activeShips.length < MAX_ACTIVE_SHIPS) {
-    spawnShip(scene);
-  }
 }
+
 
 
 

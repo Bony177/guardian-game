@@ -19,6 +19,7 @@ function Scene() {
   let recoilOffset = 0;
   let isRecoiling = false;
   let barrelBaseZ = 0;
+  const clock = new THREE.Clock();
 
   let muzzleFlashLeft = null;
   let muzzleFlashRight = null;
@@ -295,7 +296,8 @@ function Scene() {
 
     // ANIMATION
     function animate() {
-      updateShips(camera, scene);
+      const delta = clock.getDelta() * 1000; // ms
+      updateShips(camera, scene, delta);
 
       chimneySmoke.update();
 
