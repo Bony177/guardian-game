@@ -35,25 +35,22 @@ function Scene() {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
-    const onDoubleClick = () => {
+    const onDoubleClick = (e) => {
       recoilOffset = 0.2;
       isRecoiling = true;
-      // 1️⃣ mouse → normalized device coords
+      // mouse NDC
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
-      // 2️⃣ raycast
+      // raycast
       raycaster.setFromCamera(mouse, camera);
 
-      // 3️⃣ get ship meshes
       const shipMeshes = getShipMeshes();
-      // (we’ll explain this below)
-
       const intersects = raycaster.intersectObjects(shipMeshes, true);
 
-      // 4️⃣ damage first hit
       if (intersects.length > 0) {
         damageShip(intersects[0].object, scene);
+        console.log("HIT SHIP"); // 🔥 debug confirmation
       }
 
       if (muzzleVideo && muzzleFlashLeft && muzzleFlashRight) {
@@ -298,7 +295,7 @@ function Scene() {
 
     // ANIMATION
     function animate() {
-      updateShips(camera);
+      updateShips(camera, scene);
 
       chimneySmoke.update();
 

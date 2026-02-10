@@ -73,44 +73,88 @@ export function spawnShip(scene) {
   mesh.add(healthBar);
 
   const ship = {
-    id: shipIdCounter++,
-    mesh,
-    healthBar,
-    health: type.maxHealth,
-    maxHealth: type.maxHealth,
-    points: type.points,
-    spawn,
-    moveDir: new THREE.Vector3(
-      THREE.MathUtils.randFloat(-0.01, 0.01),
-      THREE.MathUtils.randFloat(-0.005, 0.005),
-      THREE.MathUtils.randFloat(-0.01, 0.01),
-    ),
-  };
+  id: shipIdCounter++,
+  mesh,
+  healthBar,
+  health: type.maxHealth,
+  maxHealth: type.maxHealth,
+  points: type.points,
+  spawn,
+  state: "alive",        // 👈 NEW
+  fallSpeed: 0,           // 👈 NEW
+  rotateSpeed: THREE.MathUtils.randFloat(-0.05, 0.05), // 👈 OPTIONAL
+  moveDir: new THREE.Vector3(
+    THREE.MathUtils.randFloat(-0.01, 0.01),
+    0,
+    THREE.MathUtils.randFloat(-0.01, 0.01),
+  ),
+};
 
   spawn.isOccupied = true;
   activeShips.push(ship);
 }
 
 
-export function updateShips(camera) {
-  activeShips.forEach(ship => {
-    ship.mesh.position.add(ship.moveDir);
-    ship.healthBar.scale.x = ship.health / ship.maxHealth;
-    ship.healthBar.lookAt(camera.position);
-  });
+export function updateShips(camera, scene) {
+  for (let i = activeShips.length - 1; i >= 0; i--) {
+    const ship = activeShips[i];
+
+    if (ship.state === "alive") {
+      // normal movement
+      ship.mesh.position.add(ship.moveDir);
+
+      // tiny float
+      ship.mesh.position.y += Math.sin(Date.now() * 0.002) * 0.002;
+
+      ship.healthBar.lookAt(camera.position);
+    }
+
+    else if (ship.state === "dying") {
+      // 👇 FREE FALL
+      ship.mesh.position.y -= ship.fallSpeed;
+      ship.fallSpeed += 0.005; // gravity feel
+
+      // optional spin
+      ship.mesh.rotation.x += ship.rotateSpeed;
+      ship.mesh.rotation.z += ship.rotateSpeed;
+
+      // 👇 DISAPPEAR CONDITION
+      if (ship.mesh.position.y < -30) {
+        destroyShip(ship, scene);
+      }
+    }
+  }
+
+  // keep spawning if slots free
+  if (activeShips.length < MAX_ACTIVE_SHIPS) {
+    spawnShip(scene);
+  }
 }
 
 
-export function damageShip(mesh, scene) {
+
+export function damageShip(hitObject) {
+  let mesh = hitObject;
+
+  // climb up to find ship root
+  while (mesh && !activeShips.find(s => s.mesh === mesh)) {
+    mesh = mesh.parent;
+  }
+
   const ship = activeShips.find(s => s.mesh === mesh);
-  if (!ship) return;
+  if (!ship || ship.state !== "alive") return;
 
   ship.health -= 15;
 
+  ship.healthBar.scale.x = ship.health / ship.maxHealth;
+
   if (ship.health <= 0) {
-    destroyShip(ship, scene);
+    ship.state = "dying";   // 👈 switch state
+    ship.fallSpeed = 0.02; // 👈 start falling
+    ship.healthBar.visible = false;
   }
 }
+
 
 export function getShipMeshes() {
   return activeShips.map(ship => ship.mesh);
