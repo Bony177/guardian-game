@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { createChimneySmoke } from "./object/smoke";
+import { spawnShip, updateShips, damageShip, getShipMeshes } from "./ships";
 
 function Scene() {
   const mountRef = useRef(null);
@@ -30,10 +32,29 @@ function Scene() {
       console.error("Mount ref not available");
       return;
     }
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
 
     const onDoubleClick = () => {
       recoilOffset = 0.2;
       isRecoiling = true;
+      // 1️⃣ mouse → normalized device coords
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      // 2️⃣ raycast
+      raycaster.setFromCamera(mouse, camera);
+
+      // 3️⃣ get ship meshes
+      const shipMeshes = getShipMeshes();
+      // (we’ll explain this below)
+
+      const intersects = raycaster.intersectObjects(shipMeshes, true);
+
+      // 4️⃣ damage first hit
+      if (intersects.length > 0) {
+        damageShip(intersects[0].object, scene);
+      }
 
       if (muzzleVideo && muzzleFlashLeft && muzzleFlashRight) {
         muzzleVideo.currentTime = 0;
@@ -95,13 +116,15 @@ function Scene() {
     scene.add(directionalLight);
 
     const loader = new GLTFLoader();
+    spawnShip(scene);
+    spawnShip(scene);
 
     loader.load(
       "/models/terrain.glb",
       (gltf) => {
         const terrain = gltf.scene;
         terrain.scale.set(40, 40, 40);
-        terrain.position.set(0, 0, -5);
+        terrain.position.set(0, -5, -5);
 
         terrain.traverse((child) => {
           if (child.isMesh) {
@@ -115,6 +138,24 @@ function Scene() {
       },
       undefined,
       (error) => console.error("Error loading terrain", error),
+    );
+
+    scene.fog = new THREE.FogExp2(
+      0x0a0f1f, // fog color
+      0.03, // density (small number!)
+    );
+
+    //scene.fog = new THREE.Fog(
+    //0x0a0f1f, // fog color
+    //20, // start distance
+    //0.03,
+    // 120, // end distance
+    //);
+
+    //CHINY SMOKEEE
+    const chimneySmoke = createChimneySmoke(
+      scene,
+      new THREE.Vector3(12, 0, 0), // vent position
     );
 
     // SKY DOME
@@ -243,7 +284,7 @@ function Scene() {
 
     // SHIELD
     const shield = new THREE.Mesh(
-      new THREE.SphereGeometry(11, 32, 32),
+      new THREE.SphereGeometry(13, 32, 32),
       new THREE.MeshStandardMaterial({
         color: 0x00ffff,
         transparent: true,
@@ -251,12 +292,16 @@ function Scene() {
         roughness: 0.3,
       }),
     );
-    shield.position.y = -3;
-    shield.position.z = -2;
+    shield.position.y = -5;
+    shield.position.z = -10;
     scene.add(shield);
 
     // ANIMATION
     function animate() {
+      updateShips(camera);
+
+      chimneySmoke.update();
+
       if (gunBarrel) {
         if (isRecoiling) {
           gunBarrel.position.z +=
