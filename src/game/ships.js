@@ -7,6 +7,7 @@ const gltfLoader = new GLTFLoader();
 
 
 
+
 // ================= CONFIG =================
 const SHIELD_CENTER = new THREE.Vector3(0, -5, -10);
 const SHIELD_RADIUS = 13;
@@ -21,21 +22,21 @@ const SHIP_TYPES = {
     points: 10,
     weight: 0.5,
     model: "/models/fs1.glb",
-    scale: 1.2,
+    scale: 2,
   },
   2: {
     maxHealth: 60,
     points: 25,
     weight: 0.35,
     model: "/models/fs2.glb",
-    scale: 1.6,
+    scale: 3,
   },
   3: {
     maxHealth: 120,
     points: 60,
     weight: 0.15,
     model: "/models/fs3.glb",
-    scale: 2.2,
+    scale: 4,
   },
 };
 
@@ -61,6 +62,15 @@ const SPAWN_INTERVAL = 1200; // milliseconds
 // ================= SHIP TYPES =================
 
 // ================= SPAWN POINTS =================
+const FORWARD_DIR = new THREE.Vector3()
+  .subVectors(GUN_POSITION, SHIELD_CENTER)
+  .normalize();
+
+// how wide the allowed front arc is
+const FRONT_DOT_THRESHOLD = 0.05; // tweak: 0.15 = wider, 0.4 = narrow
+
+
+
 const spawnPoints = [];
 for (let i = 0; i < 9; i++) {
   const angle = (i / 9) * Math.PI * 2;
@@ -95,10 +105,37 @@ export function spawnShip(scene) {
   if (activeShips.length >= MAX_ACTIVE_SHIPS) return;
 
   const free = spawnPoints.filter(s => {
+  // 1️⃣ occupied check
   if (s.isOccupied) return false;
 
-  const distanceToGun = s.position.distanceTo(GUN_POSITION);
-  return distanceToGun > MIN_GUN_DISTANCE;
+  // 2️⃣ distance from gun (no face-spawns)
+  if (s.position.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) {
+    return false;
+  }
+
+  // 3️⃣ front-of-sphere check (no back spawns)
+  const spawnDirFromShield = new THREE.Vector3(
+  s.position.x - SHIELD_CENTER.x,
+  0, // 👈 IGNORE HEIGHT
+  s.position.z - SHIELD_CENTER.z
+).normalize();
+
+const forwardDirXZ = new THREE.Vector3(
+  FORWARD_DIR.x,
+  0,
+  FORWARD_DIR.z
+).normalize();
+
+const dot = spawnDirFromShield.dot(forwardDirXZ);
+
+
+  // 4️⃣ cone limit (front + slight sides only)
+  if (dot <= FRONT_DOT_THRESHOLD) {
+    return false;
+  }
+
+  // ✅ passed all rules
+  return true;
 });
 
   if (!free.length) return;
@@ -180,8 +217,15 @@ export function updateShips(camera, scene, delta) {
 
       if (ship.mesh.position.y < -30) {
         destroyShip(ship, scene);
+
       }
+      
     }
+    // keep spawning if slots free
+//if (activeShips.length < MAX_ACTIVE_SHIPS) {
+  //spawnShip(scene);
+//}
+
   }
 }
 
