@@ -100,8 +100,8 @@ function Scene() {
       "/models/terrain.glb",
       (gltf) => {
         const terrain = gltf.scene;
-        terrain.scale.set(50, 50, 50);
-        terrain.position.set(0, 0, 0);
+        terrain.scale.set(40, 40, 40);
+        terrain.position.set(0, 0, -5);
 
         terrain.traverse((child) => {
           if (child.isMesh) {
@@ -243,7 +243,7 @@ function Scene() {
 
     // SHIELD
     const shield = new THREE.Mesh(
-      new THREE.SphereGeometry(5, 32, 32),
+      new THREE.SphereGeometry(11, 32, 32),
       new THREE.MeshStandardMaterial({
         color: 0x00ffff,
         transparent: true,
@@ -251,7 +251,8 @@ function Scene() {
         roughness: 0.3,
       }),
     );
-    shield.position.y = 2;
+    shield.position.y = -3;
+    shield.position.z = -2;
     scene.add(shield);
 
     // ANIMATION
