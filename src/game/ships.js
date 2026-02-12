@@ -1,8 +1,26 @@
 // ships.js
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { updateShipAttack, initAttackState } from "./attack.js";
 
 const gltfLoader = new GLTFLoader();
+
+// model cache and load controls
+const modelCache = new Map();
+let inFlightLoads = 0;
+const MAX_CONCURRENT_LOADS = 3;
+
+function loadGLTF(url) {
+  // store promise in cache so multiple requests share the same load
+  if (modelCache.has(url)) return modelCache.get(url);
+
+  const p = new Promise((resolve, reject) => {
+    gltfLoader.load(url, (gltf) => resolve(gltf), undefined, (err) => reject(err));
+  });
+
+  modelCache.set(url, p);
+  return p;
+}
 
 
 
@@ -12,7 +30,8 @@ const gltfLoader = new GLTFLoader();
 const SHIELD_CENTER = new THREE.Vector3(0, -5, -10);
 const SHIELD_RADIUS = 13;
 
-const MAX_ACTIVE_SHIPS = 4;
+const MIN_ACTIVE_SHIPS = 3;
+const MAX_ACTIVE_SHIPS = 5;
 
 
 //--------------------ships model----------------
@@ -71,17 +90,33 @@ const FRONT_DOT_THRESHOLD = 0.05; // tweak: 0.15 = wider, 0.4 = narrow
 
 
 
+// spawn points spread across several elevations and azimuths so ships
+// can come from top-right/top-left and slightly toward the rear (but
+// not directly behind the shield).
 const spawnPoints = [];
-for (let i = 0; i < 9; i++) {
-  const angle = (i / 9) * Math.PI * 2;
-  spawnPoints.push({
-    position: new THREE.Vector3(
-      SHIELD_CENTER.x + Math.cos(angle) * (SHIELD_RADIUS + 8),
-      SHIELD_CENTER.y + THREE.MathUtils.randFloat(3, 8),
-      SHIELD_CENTER.z + Math.sin(angle) * (SHIELD_RADIUS + 8),
-    ),
-    isOccupied: false,
-  });
+const elevations = [
+  THREE.MathUtils.degToRad(15), // low
+  THREE.MathUtils.degToRad(35), // mid (top-left/top-right)
+  THREE.MathUtils.degToRad(60), // high (near top)
+];
+const azimuths = [
+  -Math.PI * 3 / 4,
+  -Math.PI / 2,
+  -Math.PI / 4,
+  0,
+  Math.PI / 4,
+  Math.PI / 2,
+  Math.PI * 3 / 4,
+];
+
+for (const elev of elevations) {
+  for (const az of azimuths) {
+    const distance = SHIELD_RADIUS + THREE.MathUtils.randFloat(8, 14);
+    const x = SHIELD_CENTER.x + Math.cos(elev) * Math.cos(az) * distance;
+    const y = SHIELD_CENTER.y + Math.sin(elev) * distance + THREE.MathUtils.randFloat(0, 3);
+    const z = SHIELD_CENTER.z + Math.cos(elev) * Math.sin(az) * distance;
+    spawnPoints.push({ position: new THREE.Vector3(x, y, z), isOccupied: false });
+  }
 }
 
 
@@ -101,104 +136,119 @@ export function spawnShip(scene) {
   const typeId = pickShipType();
   const type = SHIP_TYPES[typeId];
 
-  
-  if (activeShips.length >= MAX_ACTIVE_SHIPS) return;
+  // fast checks: total caps and concurrent load caps
+  if (activeShips.length + inFlightLoads >= MAX_ACTIVE_SHIPS) return;
+  if (inFlightLoads >= MAX_CONCURRENT_LOADS) return;
 
   const free = spawnPoints.filter(s => {
-  // 1️⃣ occupied check
-  if (s.isOccupied) return false;
+    if (s.isOccupied) return false;
+    if (s.position.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) return false;
 
-  // 2️⃣ distance from gun (no face-spawns)
-  if (s.position.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) {
-    return false;
-  }
+    const spawnDirFromShield = new THREE.Vector3(
+      s.position.x - SHIELD_CENTER.x,
+      0,
+      s.position.z - SHIELD_CENTER.z
+    ).normalize();
 
-  // 3️⃣ front-of-sphere check (no back spawns)
-  const spawnDirFromShield = new THREE.Vector3(
-  s.position.x - SHIELD_CENTER.x,
-  0, // 👈 IGNORE HEIGHT
-  s.position.z - SHIELD_CENTER.z
-).normalize();
+    const forwardDirXZ = new THREE.Vector3(FORWARD_DIR.x, 0, FORWARD_DIR.z).normalize();
+    const horizDot = spawnDirFromShield.dot(forwardDirXZ);
 
-const forwardDirXZ = new THREE.Vector3(
-  FORWARD_DIR.x,
-  0,
-  FORWARD_DIR.z
-).normalize();
+    if (horizDot <= FRONT_DOT_THRESHOLD) {
+      const elevationAboveShield = s.position.y - SHIELD_CENTER.y;
+      if (!(elevationAboveShield > 6 && horizDot > -0.25)) return false;
+    }
 
-const dot = spawnDirFromShield.dot(forwardDirXZ);
-
-
-  // 4️⃣ cone limit (front + slight sides only)
-  if (dot <= FRONT_DOT_THRESHOLD) {
-    return false;
-  }
-
-  // ✅ passed all rules
-  return true;
-});
+    return true;
+  });
 
   if (!free.length) return;
 
   const spawn = free[Math.floor(Math.random() * free.length)];
 
-  gltfLoader.load(type.model, (gltf) => {
-  const mesh = gltf.scene;
-
-  mesh.scale.setScalar(type.scale);
-  mesh.position.copy(spawn.position);
-
-  // IMPORTANT: face shield / vault
-  mesh.lookAt(SHIELD_CENTER);
-
-  // shadows
-  mesh.traverse(child => {
-    if (child.isMesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
-    }
-  });
-
-  scene.add(mesh);
-
-  const healthBar = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.5, 0.2),
-    new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
-  );
-  healthBar.position.set(0, 1.5, 0);
-  mesh.add(healthBar);
-
-    const ship = {
-      id: shipIdCounter++,
-      mesh,
-      healthBar,
-      health: type.maxHealth,
-      maxHealth: type.maxHealth,
-      points: type.points,
-      spawn,
-      type: typeId,
-      state: "alive",
-      fallSpeed: 0,
-      rotateSpeed: THREE.MathUtils.randFloat(-0.05, 0.05),
-      moveDir: new THREE.Vector3(
-        THREE.MathUtils.randFloat(-0.01, 0.01),
-        0,
-        THREE.MathUtils.randFloat(-0.01, 0.01),
-      ),
-    };
-
+  // Reserve the spawn immediately to avoid launching duplicate loads for same slot
   spawn.isOccupied = true;
-  activeShips.push(ship);
+
+  // insert a placeholder so activeShips length reflects reserved slots
+  const placeholder = {
+    id: shipIdCounter++,
+    mesh: null,
+    healthBar: null,
+    health: type.maxHealth,
+    maxHealth: type.maxHealth,
+    points: type.points,
+    spawn,
+    type: typeId,
+    state: "loading",
+    fallSpeed: 0,
+    rotateSpeed: THREE.MathUtils.randFloat(-0.05, 0.05),
+    moveDir: new THREE.Vector3(
+      THREE.MathUtils.randFloat(-0.01, 0.01),
+      0,
+      THREE.MathUtils.randFloat(-0.01, 0.01),
+    ),
+  };
+
+  activeShips.push(placeholder);
+  inFlightLoads++;
+
+  loadGLTF(type.model).then((gltf) => {
+    const mesh = gltf.scene.clone(true);
+
+    mesh.scale.setScalar(type.scale);
+    mesh.position.copy(spawn.position);
+    // Orient so the ship's local +X axis points toward the shield center.
+    const dirToShield = new THREE.Vector3().subVectors(SHIELD_CENTER, mesh.position).normalize();
+    const xAxis = new THREE.Vector3(1, 0, 0);
+    const q = new THREE.Quaternion().setFromUnitVectors(xAxis, dirToShield);
+    // preserve world-up (Y) by aligning then re-orienting yaw only
+    mesh.quaternion.copy(q);
+
+    // reduce GPU load by defaulting shadows off; enable later if needed
+    mesh.traverse(child => {
+      if (child.isMesh) {
+        child.castShadow = false;
+        child.receiveShadow = false;
+      }
+    });
+
+    scene.add(mesh);
+
+    const healthBar = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.5, 0.2),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
+    );
+    healthBar.position.set(0, 1.5, 0);
+    mesh.add(healthBar);
+
+    // fill in placeholder
+    placeholder.mesh = mesh;
+    placeholder.healthBar = healthBar;
+    placeholder.state = "alive";
+    initAttackState(placeholder);
+  }).catch((err) => {
+    console.error("Failed to load ship model", err);
+    // cleanup reservation and placeholder
+    spawn.isOccupied = false;
+    const idx = activeShips.indexOf(placeholder);
+    if (idx !== -1) activeShips.splice(idx, 1);
+  }).finally(() => {
+    inFlightLoads--;
   });
 }
 
 
-export function updateShips(camera, scene, delta) {
+export function updateShips(camera, scene, delta, shield) {
   spawnTimer += delta;
 
   if (spawnTimer > SPAWN_INTERVAL && activeShips.length < MAX_ACTIVE_SHIPS) {
     spawnShip(scene);
     spawnTimer = 0;
+  }
+
+  // Ensure we try to maintain the minimum number of active ships,
+  // but pace spawns to avoid launching many loads in one frame.
+  if (activeShips.length + inFlightLoads < MIN_ACTIVE_SHIPS && activeShips.length < MAX_ACTIVE_SHIPS) {
+    spawnShip(scene);
   }
 
   for (let i = activeShips.length - 1; i >= 0; i--) {
@@ -208,6 +258,7 @@ export function updateShips(camera, scene, delta) {
       ship.mesh.position.add(ship.moveDir);
       ship.mesh.position.y += Math.sin(Date.now() * 0.002) * 0.002;
       ship.healthBar.lookAt(camera.position);
+      updateShipAttack(ship, delta, scene, shield);
     } 
     else if (ship.state === "dying") {
       ship.mesh.position.y -= ship.fallSpeed;
@@ -241,7 +292,7 @@ export function damageShip(hitObject) {
   }
 
   const ship = activeShips.find(s => s.mesh === mesh);
-  if (!ship || ship.state !== "alive") return;
+  if (!ship || ship.state !== "alive" || !ship.mesh) return;
 
   ship.health -= 15;
 
@@ -256,12 +307,30 @@ export function damageShip(hitObject) {
 
 
 export function getShipMeshes() {
-  return activeShips.map(ship => ship.mesh);
+  return activeShips.filter(ship => ship.mesh !== null).map(ship => ship.mesh);
 }
 
 
 function destroyShip(ship, scene) {
-  scene.remove(ship.mesh);
+  // dispose geometry/materials/textures to avoid memory/GPU leaks
+  if (ship.mesh) {
+    ship.mesh.traverse(child => {
+      if (child.isMesh) {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach(mat => {
+            if (mat.map) mat.map.dispose();
+            if (mat.lightMap) mat.lightMap.dispose();
+            if (mat.emissiveMap) mat.emissiveMap.dispose();
+            mat.dispose();
+          });
+        }
+      }
+    });
+    scene.remove(ship.mesh);
+  }
+
   ship.spawn.isOccupied = false;
 
   score += ship.points;
@@ -270,6 +339,7 @@ function destroyShip(ship, scene) {
   const idx = activeShips.indexOf(ship);
   if (idx !== -1) activeShips.splice(idx, 1);
 
+  // small delay before attempting to spawn replacement
   setTimeout(() => spawnShip(scene), 1200);
 }
 
