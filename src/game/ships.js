@@ -294,12 +294,12 @@ export function updateShips(camera, scene, delta, shield) {
 
   for (let i = activeShips.length - 1; i >= 0; i--) {
     const ship = activeShips[i];
-
+    updateShipAttack(ship, delta, scene, shield);
     if (ship.state === "alive") {
       ship.mesh.position.add(ship.moveDir);
       ship.mesh.position.y += Math.sin(Date.now() * 0.002) * 0.002;
       ship.healthBar.lookAt(camera.position);
-      updateShipAttack(ship, delta, scene, shield);
+      
     } 
     else if (ship.state === "dying") {
       ship.mesh.position.y -= ship.fallSpeed;
@@ -324,10 +324,11 @@ export function updateShips(camera, scene, delta, shield) {
 
 
 
-export function damageShip(hitObject) {
+export function damageShip(hitObject, scene) {
+
   let mesh = hitObject;
 
-  // climb up to find ship root
+  // Find root ship mesh
   while (mesh && !activeShips.find(s => s.mesh === mesh)) {
     mesh = mesh.parent;
   }
@@ -335,14 +336,21 @@ export function damageShip(hitObject) {
   const ship = activeShips.find(s => s.mesh === mesh);
   if (!ship || ship.state !== "alive" || !ship.mesh) return;
 
+  // Remove beam properly if exists
+  if (ship.beam) {
+    scene.remove(ship.beam);
+    ship.beam.geometry.dispose();
+    ship.beam.material.dispose();
+    ship.beam = null;
+  }
+
   ship.health -= 15;
 
   ship.healthBar.scale.x = ship.health / ship.maxHealth;
 
   if (ship.health <= 0) {
-     
-    ship.state = "dying";   // 👈 switch state
-    ship.fallSpeed = 0.02; // 👈 start falling
+    ship.state = "dying";
+    ship.fallSpeed = 0.02;
     ship.healthBar.visible = false;
   }
 }

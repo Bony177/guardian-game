@@ -1,72 +1,53 @@
 import * as THREE from "three";
 
-// Global limit so shield doesn't melt instantly
-let activeAttackers = 0;
-const MAX_SIMULTANEOUS_ATTACKS = 2;
-
 // Initialize attack properties on ship
 export function initAttackState(ship) {
-  ship.attackCooldown = THREE.MathUtils.randFloat(2, 4);
-  ship.attackTimer = 0;
-  ship.attackState = "idle"; // idle | charging | firing
-  ship.beam = null;
+  ship.attackCooldown = THREE.MathUtils.randFloat(2, 4); // time until next shot
+  ship.fireTimer = 0;                                    // how long beam stays
+  ship.beam = null;                                       // beam reference
 }
 
 // Update attack logic per frame
 export function updateShipAttack(ship, delta, scene, shield) {
-    
-  if (ship.state !== "alive" || !ship.mesh) return;
+  if (!ship.mesh || ship.state !== "alive") {
+    removeBeam(ship, scene);
+    return;
+  }
 
+  const deltaSeconds = delta / 1000;
+
+  // If beam is currently active
+  if (ship.beam) {
+    ship.fireTimer -= deltaSeconds;
+
+    if (ship.fireTimer <= 0) {
+      removeBeam(ship, scene);
+      ship.attackCooldown = THREE.MathUtils.randFloat(2, 5);
+    }
+
+    return; // Don't process cooldown while firing
+  }
 
   // Cooldown ticking
-  if (ship.attackState === "idle") {
-    ship.attackCooldown -= delta / 1000;
+  ship.attackCooldown -= deltaSeconds;
 
-    if (
-      ship.attackCooldown <= 0 &&
-      activeAttackers < MAX_SIMULTANEOUS_ATTACKS
-    ) {
-      ship.attackState = "charging";
-      ship.attackTimer = 0.5; // charge time
-      activeAttackers++;
-    }
-  }
-
-  // Charging phase
-  else if (ship.attackState === "charging") {
-    ship.attackTimer -= delta / 1000;
-
-    if (ship.attackTimer <= 0) {
-      fireBeam(ship, scene, shield);
-      ship.attackState = "firing";
-      ship.attackTimer = 0.3; // beam duration
-    }
-  }
-
-  // Firing phase
-  else if (ship.attackState === "firing") {
-    ship.attackTimer -= delta / 1000;
-
-    if (ship.attackTimer <= 0) {
-      removeBeam(ship, scene);
-      ship.attackState = "idle";
-      ship.attackCooldown = THREE.MathUtils.randFloat(2, 5);
-      activeAttackers--;
-    }
+  if (ship.attackCooldown <= 0) {
+    fireBeam(ship, scene, shield);
+    ship.fireTimer = 0.3; // beam visible duration
   }
 }
 
-// 🔥 Create beam visual + apply damage
+// Create beam visual + apply damage
+
 function fireBeam(ship, scene, shield) {
+  if (ship.beam) return;
+
   if (!ship.mesh) return;
 
   const start = ship.mesh.position.clone();
   const end = shield.object.position.clone();
 
-
-  const direction = new THREE.Vector3()
-    .subVectors(end, start);
-
+  const direction = new THREE.Vector3().subVectors(end, start);
   const length = direction.length();
 
   const geometry = new THREE.CylinderGeometry(0.08, 0.08, length, 8);
@@ -78,14 +59,11 @@ function fireBeam(ship, scene, shield) {
 
   const beam = new THREE.Mesh(geometry, material);
 
-  // Position beam between ship and shield
   const midpoint = new THREE.Vector3()
     .addVectors(start, end)
     .multiplyScalar(0.5);
 
   beam.position.copy(midpoint);
-
-  // Rotate beam to face shield
   beam.lookAt(end);
   beam.rotateX(Math.PI / 2);
 
@@ -93,24 +71,32 @@ function fireBeam(ship, scene, shield) {
 
   ship.beam = beam;
 
-  // 🔥 Apply shield damage here
+  // Apply shield damage
   shield.takeDamage(getDamage(ship.type));
 }
 
-// Remove beam
+// Remove beam safely
 function removeBeam(ship, scene) {
-  if (ship.beam) {
-    scene.remove(ship.beam);
-    ship.beam.geometry.dispose();
-    ship.beam.material.dispose();
-    ship.beam = null;
+  if (!ship.beam) return;
+
+  scene.remove(ship.beam);
+
+  if (ship.beam.geometry) ship.beam.geometry.dispose();
+  if (ship.beam.material) {
+    if (Array.isArray(ship.beam.material)) {
+      ship.beam.material.forEach(m => m.dispose());
+    } else {
+      ship.beam.material.dispose();
+    }
   }
+
+  ship.beam = null;
 }
 
 // Damage by ship type
 function getDamage(type) {
-  if (type === 1) return 5;   // Light
-  if (type === 2) return 12;  // Medium
-  if (type === 3) return 25;  // Heavy
+  if (type === 1) return 5;
+  if (type === 2) return 12;
+  if (type === 3) return 25;
   return 5;
 }
