@@ -137,8 +137,22 @@ function pickShipType() {
   return 1;
 }
 
+const free = spawnPoints.filter(s => {
+    if (s.isOccupied) return false;
+    if (s.position.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) return false;
 
-export function spawnShip(scene) {
+    if (s.position.z > 5) return false;
+    if (s.position.z < -40) return false;
+    if (Math.abs(s.position.x) > 30) return false;
+    if (s.position.y > 25) return false;
+
+    return true;
+});
+
+
+
+
+export function spawnShip(scene,camera) {
   const typeId = pickShipType();
   const type = SHIP_TYPES[typeId];
 
@@ -147,7 +161,7 @@ export function spawnShip(scene) {
   if (inFlightLoads >= MAX_CONCURRENT_LOADS) return;
 
   const free = spawnPoints.filter(s => {
-    if (s.isOccupied) return false;
+   
     if (s.position.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) return false;
 
     const spawnDirFromShield = new THREE.Vector3(
@@ -256,14 +270,14 @@ export function updateShips(camera, scene, delta, shield) {
 
 
   if (spawnTimer > SPAWN_INTERVAL && activeShips.length < MAX_ACTIVE_SHIPS) {
-    spawnShip(scene);
+    spawnShip(scene,camera);
     spawnTimer = 0;
   }
 
   // Ensure we try to maintain the minimum number of active ships,
   // but pace spawns to avoid launching many loads in one frame.
   if (activeShips.length + inFlightLoads < MIN_ACTIVE_SHIPS && activeShips.length < MAX_ACTIVE_SHIPS) {
-    spawnShip(scene);
+    spawnShip(scene,camera);
   }
 
   for (let i = activeShips.length - 1; i >= 0; i--) {
@@ -363,6 +377,6 @@ function destroyShip(ship, scene) {
   if (idx !== -1) activeShips.splice(idx, 1);
 
   // small delay before attempting to spawn replacement
-  setTimeout(() => spawnShip(scene), 1200);
+  //setTimeout(() => spawnShip(scene,camera), 1200);
 }
 

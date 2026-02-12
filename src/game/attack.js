@@ -14,6 +14,7 @@ export function initAttackState(ship) {
 
 // Update attack logic per frame
 export function updateShipAttack(ship, delta, scene, shield) {
+    
   if (ship.state !== "alive" || !ship.mesh) return;
 
 
