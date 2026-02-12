@@ -1,87 +1,128 @@
 import * as THREE from "three";
 
-// Initialize attack properties on ship
+// ================= INIT =================
+
 export function initAttackState(ship) {
-  ship.attackCooldown = THREE.MathUtils.randFloat(2, 4); // time until next shot
-  ship.fireTimer = 0;                                    // how long beam stays
-  ship.beam = null;                                       // beam reference
+  ship.attackCooldown = THREE.MathUtils.randFloat(2, 4);
+  ship.fireTimer = 0;
+  ship.beam = null;
+  ship.isFiring = false;
 }
 
-// Update attack logic per frame
-export function updateShipAttack(ship, delta, scene, shield) {
+// Safety guard
+function ensureAttackState(ship) {
+  if (typeof ship.attackCooldown !== "number") {
+    ship.attackCooldown = THREE.MathUtils.randFloat(2, 4);
+  }
+  if (typeof ship.fireTimer !== "number") {
+    ship.fireTimer = 0;
+  }
+  if (!Object.prototype.hasOwnProperty.call(ship, "beam")) {
+    ship.beam = null;
+  }
+  if (!Object.prototype.hasOwnProperty.call(ship, "isFiring")) {
+    ship.isFiring = false;
+  }
+}
+
+// ================= UPDATE =================
+
+export function updateShipAttack(ship, delta, shield) {
+  ensureAttackState(ship);
+
+  // If ship not alive → remove beam completely
   if (!ship.mesh || ship.state !== "alive") {
-    removeBeam(ship, scene);
+    removeBeam(ship);
     return;
   }
 
   const deltaSeconds = delta / 1000;
 
-  // If beam is currently active
-  if (ship.beam) {
+  // Do not fire while the movement state machine says the ship is moving.
+  // `moveDir` is always non-zero for most ships, so it cannot be used as a moving check.
+  const isMoving = ship.isMoving === true;
+
+  if (isMoving) {
+    removeBeam(ship);
+    return;
+  }
+
+  // If currently firing
+  if (ship.isFiring) {
     ship.fireTimer -= deltaSeconds;
 
     if (ship.fireTimer <= 0) {
-      removeBeam(ship, scene);
-      ship.attackCooldown = THREE.MathUtils.randFloat(2, 5);
+      removeBeam(ship);
+      ship.attackCooldown = THREE.MathUtils.randFloat(2, 4);
+      ship.isFiring = false;
     }
 
-    return; // Don't process cooldown while firing
+    return;
   }
 
   // Cooldown ticking
   ship.attackCooldown -= deltaSeconds;
 
   if (ship.attackCooldown <= 0) {
-    fireBeam(ship, scene, shield);
-    ship.fireTimer = 0.3; // beam visible duration
+    createBeam(ship, shield);
+    ship.fireTimer = 0.3;
+    ship.isFiring = true;
+
+    shield.takeDamage(getDamage(ship.type));
   }
 }
 
-// Create beam visual + apply damage
+// ================= CREATE BEAM =================
 
-function fireBeam(ship, scene, shield) {
+function createBeam(ship, shield) {
   if (ship.beam) return;
-
   if (!ship.mesh) return;
+  if (!ship.mesh.parent) return;
 
-  const start = ship.mesh.position.clone();
-  const end = shield.object.position.clone();
-
-  const direction = new THREE.Vector3().subVectors(end, start);
+  const startWorld = ship.mesh.getWorldPosition(new THREE.Vector3());
+  const endWorld = shield.object.getWorldPosition(new THREE.Vector3());
+  const direction = new THREE.Vector3().subVectors(endWorld, startWorld);
   const length = direction.length();
+  if (length <= 0.001) return;
 
-  const geometry = new THREE.CylinderGeometry(0.08, 0.08, length, 8);
+  // Create thin laser
+  const geometry = new THREE.CylinderGeometry(0.06, 0.06, length, 6);
   const material = new THREE.MeshBasicMaterial({
     color: 0xff0000,
     transparent: true,
     opacity: 0.9,
+    depthWrite: false,
   });
 
   const beam = new THREE.Mesh(geometry, material);
+  beam.renderOrder = 10;
 
-  const midpoint = new THREE.Vector3()
-    .addVectors(start, end)
-    .multiplyScalar(0.5);
+  // Place beam midway between ship and shield in world space.
+  beam.position.copy(startWorld).add(endWorld).multiplyScalar(0.5);
+  beam.quaternion.setFromUnitVectors(
+    new THREE.Vector3(0, 1, 0), // Cylinder points along local +Y
+    direction.clone().normalize(),
+  );
 
-  beam.position.copy(midpoint);
-  beam.lookAt(end);
-  beam.rotateX(Math.PI / 2);
-
-  scene.add(beam);
+  // Add to same parent as ship so world transform is stable.
+  ship.mesh.parent.add(beam);
 
   ship.beam = beam;
-
-  // Apply shield damage
-  shield.takeDamage(getDamage(ship.type));
 }
 
-// Remove beam safely
-function removeBeam(ship, scene) {
+// ================= REMOVE BEAM =================
+
+function removeBeam(ship) {
   if (!ship.beam) return;
 
-  scene.remove(ship.beam);
+  if (ship.beam.parent) {
+    ship.beam.parent.remove(ship.beam);
+  }
 
-  if (ship.beam.geometry) ship.beam.geometry.dispose();
+  if (ship.beam.geometry) {
+    ship.beam.geometry.dispose();
+  }
+
   if (ship.beam.material) {
     if (Array.isArray(ship.beam.material)) {
       ship.beam.material.forEach(m => m.dispose());
@@ -93,7 +134,8 @@ function removeBeam(ship, scene) {
   ship.beam = null;
 }
 
-// Damage by ship type
+// ================= DAMAGE =================
+
 function getDamage(type) {
   if (type === 1) return 5;
   if (type === 2) return 12;

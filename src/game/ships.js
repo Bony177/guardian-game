@@ -1,7 +1,7 @@
 // ships.js
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { updateShipAttack, initAttackState } from "./attack.js";
+import { initAttackState, updateShipAttack } from "./attack";
 
 
 const gltfLoader = new GLTFLoader();
@@ -259,11 +259,18 @@ const dirToShield = new THREE.Vector3()
     healthBar.position.set(0, 1.5, 0);
     mesh.add(healthBar);
 
+    placeholder.mesh = mesh;
+    placeholder.healthBar = healthBar;
+    placeholder.state = "alive";
+
+    initAttackState(placeholder);
+
+
     // fill in placeholder
     placeholder.mesh = mesh;
     placeholder.healthBar = healthBar;
     placeholder.state = "alive";
-    initAttackState(placeholder);
+    
   }).catch((err) => {
     console.error("Failed to load ship model", err);
     // cleanup reservation and placeholder
@@ -279,7 +286,7 @@ export function updateShips(camera, scene, delta, shield) {
   spawnTimer += delta;
 
   
-
+  
 
   if (spawnTimer > SPAWN_INTERVAL && activeShips.length < MAX_ACTIVE_SHIPS) {
     spawnShip(scene,camera);
@@ -294,14 +301,48 @@ export function updateShips(camera, scene, delta, shield) {
 
   for (let i = activeShips.length - 1; i >= 0; i--) {
     const ship = activeShips[i];
-    updateShipAttack(ship, delta, scene, shield);
-    if (ship.state === "alive") {
-      ship.mesh.position.add(ship.moveDir);
-      ship.mesh.position.y += Math.sin(Date.now() * 0.002) * 0.002;
-      ship.healthBar.lookAt(camera.position);
-      
-    } 
+
+    
+    if (ship.state === "alive" && ship.mesh) {
+
+  const deltaSeconds = delta / 1000;
+
+  // Initialize movement state if not present
+  if (ship.isMoving === undefined) {
+    ship.isMoving = true;
+    ship.moveTimer = THREE.MathUtils.randFloat(1, 3);
+    ship.pauseTimer = 0;
+  }
+
+  if (ship.isMoving) {
+    ship.mesh.position.add(ship.moveDir);
+    ship.moveTimer -= deltaSeconds;
+
+    if (ship.moveTimer <= 0) {
+      ship.isMoving = false;
+      ship.pauseTimer = THREE.MathUtils.randFloat(1, 2);
+    }
+
+  } else {
+    ship.pauseTimer -= deltaSeconds;
+
+    if (ship.pauseTimer <= 0) {
+      ship.isMoving = true;
+      ship.moveTimer = THREE.MathUtils.randFloat(1, 3);
+    }
+  }
+
+  updateShipAttack(ship, delta, shield);
+
+  ship.mesh.position.y += Math.sin(Date.now() * 0.002) * 0.002;
+  ship.healthBar.lookAt(camera.position);
+}
+
     else if (ship.state === "dying") {
+      if (!ship.mesh) {
+        destroyShip(ship, scene);
+        continue;
+      }
       ship.mesh.position.y -= ship.fallSpeed;
       ship.fallSpeed += 0.005;
       ship.mesh.rotation.x += ship.rotateSpeed;
@@ -336,13 +377,8 @@ export function damageShip(hitObject, scene) {
   const ship = activeShips.find(s => s.mesh === mesh);
   if (!ship || ship.state !== "alive" || !ship.mesh) return;
 
-  // Remove beam properly if exists
-  if (ship.beam) {
-    scene.remove(ship.beam);
-    ship.beam.geometry.dispose();
-    ship.beam.material.dispose();
-    ship.beam = null;
-  }
+  // Centralized attack cleanup in attack.js
+
 
   ship.health -= 15;
 
@@ -362,14 +398,9 @@ export function getShipMeshes() {
 
 
 function destroyShip(ship, scene) {
-  // dispose geometry/materials/textures to avoid memory/GPU leaks
-  if (ship.beam) {
-  scene.remove(ship.beam);
-  ship.beam.geometry.dispose();
-  ship.beam.material.dispose();
-  ship.beam = null;
-}
 
+
+  // dispose geometry/materials/textures to avoid memory/GPU leaks
   if (ship.mesh) {
     ship.mesh.traverse(child => {
       if (child.isMesh) {
