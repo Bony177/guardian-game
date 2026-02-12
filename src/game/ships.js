@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { updateShipAttack, initAttackState } from "./attack.js";
 
+
 const gltfLoader = new GLTFLoader();
 
 // model cache and load controls
@@ -95,9 +96,9 @@ const FRONT_DOT_THRESHOLD = 0.05; // tweak: 0.15 = wider, 0.4 = narrow
 // not directly behind the shield).
 const spawnPoints = [];
 const elevations = [
-  THREE.MathUtils.degToRad(15), // low
-  THREE.MathUtils.degToRad(35), // mid (top-left/top-right)
-  THREE.MathUtils.degToRad(60), // high (near top)
+  THREE.MathUtils.degToRad(10), // low
+  THREE.MathUtils.degToRad(25), // mid (top-left/top-right)
+  THREE.MathUtils.degToRad(40), // high (near top)
 ];
 const azimuths = [
   -Math.PI * 3 / 4,
@@ -107,6 +108,11 @@ const azimuths = [
   Math.PI / 4,
   Math.PI / 2,
   Math.PI * 3 / 4,
+  //-Math.PI / 4,
+  //-Math.PI / 8,
+  //0,
+  //Math.PI / 8,
+  //Math.PI / 4,
 ];
 
 for (const elev of elevations) {
@@ -196,8 +202,14 @@ export function spawnShip(scene) {
 
     mesh.scale.setScalar(type.scale);
     mesh.position.copy(spawn.position);
+    console.log("Ship spawned at:", mesh.position);
+
     // Orient so the ship's local +X axis points toward the shield center.
-    const dirToShield = new THREE.Vector3().subVectors(SHIELD_CENTER, mesh.position).normalize();
+const dirToShield = new THREE.Vector3()
+  .subVectors(SHIELD_CENTER, mesh.position)
+  .normalize();
+
+
     const xAxis = new THREE.Vector3(1, 0, 0);
     const q = new THREE.Quaternion().setFromUnitVectors(xAxis, dirToShield);
     // preserve world-up (Y) by aligning then re-orienting yaw only
@@ -239,6 +251,9 @@ export function spawnShip(scene) {
 
 export function updateShips(camera, scene, delta, shield) {
   spawnTimer += delta;
+
+  
+
 
   if (spawnTimer > SPAWN_INTERVAL && activeShips.length < MAX_ACTIVE_SHIPS) {
     spawnShip(scene);
@@ -299,6 +314,7 @@ export function damageShip(hitObject) {
   ship.healthBar.scale.x = ship.health / ship.maxHealth;
 
   if (ship.health <= 0) {
+     
     ship.state = "dying";   // 👈 switch state
     ship.fallSpeed = 0.02; // 👈 start falling
     ship.healthBar.visible = false;
@@ -313,6 +329,13 @@ export function getShipMeshes() {
 
 function destroyShip(ship, scene) {
   // dispose geometry/materials/textures to avoid memory/GPU leaks
+  if (ship.beam) {
+  scene.remove(ship.beam);
+  ship.beam.geometry.dispose();
+  ship.beam.material.dispose();
+  ship.beam = null;
+}
+
   if (ship.mesh) {
     ship.mesh.traverse(child => {
       if (child.isMesh) {
