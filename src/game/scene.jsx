@@ -123,8 +123,8 @@ function Scene() {
     scene.add(directionalLight);
 
     const loader = new GLTFLoader();
-    spawnShip(scene);
-    spawnShip(scene);
+    spawnShip(scene, camera);
+    spawnShip(scene, camera);
 
     loader.load(
       "/models/terrain.glb",

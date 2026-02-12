@@ -66,6 +66,13 @@ const SHIP_TYPES = {
 const GUN_POSITION = new THREE.Vector3(0, 0, 12); // same as gun base
 const MIN_GUN_DISTANCE = 12; // tweak this
 
+// ================= CAMERA-ALIGNED SPAWN VOLUME =================
+// We sample points directly from bounded slices of the camera frustum.
+const SPAWN_HORIZONTAL_VIEW_FILL = 0.75;
+const SPAWN_VERTICAL_VIEW_FILL = 0.6;
+const SPAWN_ATTEMPTS = 40;
+const MIN_SPAWN_SEPARATION = 4;
+
 
 // ================= STATE =================
 let shipIdCounter = 0;
@@ -79,50 +86,96 @@ const shipsDestroyedByType = { 1: 0, 2: 0, 3: 0 };
 let spawnTimer = 0;
 const SPAWN_INTERVAL = 1200; // milliseconds
 
-// ================= SHIP TYPES =================
+function getCameraBasis(camera) {
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
 
-// ================= SPAWN POINTS =================
-const FORWARD_DIR = new THREE.Vector3()
-  .subVectors(GUN_POSITION, SHIELD_CENTER)
-  .normalize();
+  const right = new THREE.Vector3()
+    .crossVectors(forward, camera.up)
+    .normalize();
+  const up = new THREE.Vector3()
+    .crossVectors(right, forward)
+    .normalize();
 
-// how wide the allowed front arc is
-const FRONT_DOT_THRESHOLD = 0.05; // tweak: 0.15 = wider, 0.4 = narrow
+  return { forward, right, up };
+}
 
+function getSpawnDistanceRange(camera) {
+  const shieldDistance = camera.position.distanceTo(SHIELD_CENTER);
 
+  // Keep spawns between camera and shield with margins on both sides.
+  const maxDistanceFromCamera = Math.min(
+    camera.far * 0.6,
+    shieldDistance - SHIELD_RADIUS * 0.35,
+  );
+  const minDistanceFromCamera = Math.max(
+    camera.near + 4,
+    maxDistanceFromCamera * 0.45,
+  );
 
-// spawn points spread across several elevations and azimuths so ships
-// can come from top-right/top-left and slightly toward the rear (but
-// not directly behind the shield).
-const spawnPoints = [];
-const elevations = [
-  THREE.MathUtils.degToRad(10), // low
-  THREE.MathUtils.degToRad(25), // mid (top-left/top-right)
-  THREE.MathUtils.degToRad(40), // high (near top)
-];
-const azimuths = [
-  -Math.PI * 3 / 4,
-  -Math.PI / 2,
-  -Math.PI / 4,
-  0,
-  Math.PI / 4,
-  Math.PI / 2,
-  Math.PI * 3 / 4,
-  //-Math.PI / 4,
-  //-Math.PI / 8,
-  //0,
-  //Math.PI / 8,
-  //Math.PI / 4,
-];
+  if (minDistanceFromCamera >= maxDistanceFromCamera) return null;
+  return { minDistanceFromCamera, maxDistanceFromCamera };
+}
 
-for (const elev of elevations) {
-  for (const az of azimuths) {
-    const distance = SHIELD_RADIUS + THREE.MathUtils.randFloat(8, 14);
-    const x = SHIELD_CENTER.x + Math.cos(elev) * Math.cos(az) * distance;
-    const y = SHIELD_CENTER.y + Math.sin(elev) * distance + THREE.MathUtils.randFloat(0, 3);
-    const z = SHIELD_CENTER.z + Math.cos(elev) * Math.sin(az) * distance;
-    spawnPoints.push({ position: new THREE.Vector3(x, y, z), isOccupied: false });
+function samplePointInFrustumSlice(camera, basis, distanceFromCamera) {
+  const center = camera.position
+    .clone()
+    .addScaledVector(basis.forward, distanceFromCamera);
+
+  const halfHeight = Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * distanceFromCamera;
+  const halfWidth = halfHeight * camera.aspect;
+
+  const u = THREE.MathUtils.randFloat(-SPAWN_HORIZONTAL_VIEW_FILL, SPAWN_HORIZONTAL_VIEW_FILL);
+  const v = THREE.MathUtils.randFloat(-SPAWN_VERTICAL_VIEW_FILL, SPAWN_VERTICAL_VIEW_FILL);
+
+  return center
+    .clone()
+    .addScaledVector(basis.right, u * halfWidth)
+    .addScaledVector(basis.up, v * halfHeight);
+}
+
+function isPointInShieldFrontHalfSpace(point, camera) {
+  const shieldToCameraDir = new THREE.Vector3()
+    .subVectors(camera.position, SHIELD_CENTER)
+    .normalize();
+
+  const pointFromShield = new THREE.Vector3().subVectors(point, SHIELD_CENTER);
+  return pointFromShield.dot(shieldToCameraDir) > 0;
+}
+
+function isSeparatedFromActiveShips(point) {
+  for (const ship of activeShips) {
+    if (!ship.mesh || ship.state !== "alive") continue;
+    if (ship.mesh.position.distanceTo(point) < MIN_SPAWN_SEPARATION) return false;
   }
+  return true;
+}
+
+function pickSpawnPosition(camera) {
+  if (!camera) return null;
+
+  camera.updateMatrixWorld(true);
+  const basis = getCameraBasis(camera);
+  const distanceRange = getSpawnDistanceRange(camera);
+  if (!distanceRange) return null;
+
+  for (let i = 0; i < SPAWN_ATTEMPTS; i++) {
+    const distanceFromCamera = THREE.MathUtils.randFloat(
+      distanceRange.minDistanceFromCamera,
+      distanceRange.maxDistanceFromCamera,
+    );
+
+    const point = samplePointInFrustumSlice(camera, basis, distanceFromCamera);
+
+    if (!isPointInShieldFrontHalfSpace(point, camera)) continue;
+    if (point.distanceTo(SHIELD_CENTER) <= SHIELD_RADIUS + 1.5) continue;
+    if (point.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) continue;
+    if (!isSeparatedFromActiveShips(point)) continue;
+
+    return { position: point };
+  }
+
+  return null;
 }
 
 
@@ -137,21 +190,6 @@ function pickShipType() {
   return 1;
 }
 
-const free = spawnPoints.filter(s => {
-    if (s.isOccupied) return false;
-    if (s.position.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) return false;
-
-    if (s.position.z > 5) return false;
-    if (s.position.z < -40) return false;
-    if (Math.abs(s.position.x) > 30) return false;
-    if (s.position.y > 25) return false;
-
-    return true;
-});
-
-
-
-
 export function spawnShip(scene,camera) {
   const typeId = pickShipType();
   const type = SHIP_TYPES[typeId];
@@ -160,33 +198,8 @@ export function spawnShip(scene,camera) {
   if (activeShips.length + inFlightLoads >= MAX_ACTIVE_SHIPS) return;
   if (inFlightLoads >= MAX_CONCURRENT_LOADS) return;
 
-  const free = spawnPoints.filter(s => {
-   
-    if (s.position.distanceTo(GUN_POSITION) <= MIN_GUN_DISTANCE) return false;
-
-    const spawnDirFromShield = new THREE.Vector3(
-      s.position.x - SHIELD_CENTER.x,
-      0,
-      s.position.z - SHIELD_CENTER.z
-    ).normalize();
-
-    const forwardDirXZ = new THREE.Vector3(FORWARD_DIR.x, 0, FORWARD_DIR.z).normalize();
-    const horizDot = spawnDirFromShield.dot(forwardDirXZ);
-
-    if (horizDot <= FRONT_DOT_THRESHOLD) {
-      const elevationAboveShield = s.position.y - SHIELD_CENTER.y;
-      if (!(elevationAboveShield > 6 && horizDot > -0.25)) return false;
-    }
-
-    return true;
-  });
-
-  if (!free.length) return;
-
-  const spawn = free[Math.floor(Math.random() * free.length)];
-
-  // Reserve the spawn immediately to avoid launching duplicate loads for same slot
-  spawn.isOccupied = true;
+  const spawn = pickSpawnPosition(camera);
+  if (!spawn) return;
 
   // insert a placeholder so activeShips length reflects reserved slots
   const placeholder = {
@@ -254,7 +267,6 @@ const dirToShield = new THREE.Vector3()
   }).catch((err) => {
     console.error("Failed to load ship model", err);
     // cleanup reservation and placeholder
-    spawn.isOccupied = false;
     const idx = activeShips.indexOf(placeholder);
     if (idx !== -1) activeShips.splice(idx, 1);
   }).finally(() => {
@@ -367,8 +379,6 @@ function destroyShip(ship, scene) {
     });
     scene.remove(ship.mesh);
   }
-
-  ship.spawn.isOccupied = false;
 
   score += ship.points;
   shipsDestroyedByType[ship.type]++;
