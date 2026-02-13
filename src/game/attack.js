@@ -3,7 +3,7 @@ import * as THREE from "three";
 // ================= INIT =================
 
 export function initAttackState(ship) {
-  ship.attackCooldown = THREE.MathUtils.randFloat(2, 4);
+  ship.attackCooldown = THREE.MathUtils.randFloat(0, 1);
   ship.fireTimer = 0;
   ship.beam = null;
   ship.isFiring = false;
@@ -12,18 +12,22 @@ export function initAttackState(ship) {
 // Safety guard
 function ensureAttackState(ship) {
   if (typeof ship.attackCooldown !== "number") {
-    ship.attackCooldown = THREE.MathUtils.randFloat(2, 4);
+    ship.attackCooldown = 0;
   }
+
   if (typeof ship.fireTimer !== "number") {
     ship.fireTimer = 0;
   }
+
   if (!Object.prototype.hasOwnProperty.call(ship, "beam")) {
     ship.beam = null;
   }
+
   if (!Object.prototype.hasOwnProperty.call(ship, "isFiring")) {
     ship.isFiring = false;
   }
 }
+
 
 // ================= UPDATE =================
 
@@ -65,7 +69,7 @@ export function updateShipAttack(ship, delta, shield) {
 
   if (ship.attackCooldown <= 0) {
     createBeam(ship, shield);
-    ship.fireTimer = 0.3;
+    ship.fireTimer = 0.6;
     ship.isFiring = true;
 
     shield.takeDamage(getDamage(ship.type));
