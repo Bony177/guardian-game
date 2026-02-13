@@ -310,8 +310,12 @@ function Scene() {
 
     // ANIMATION
     function animate() {
+      const delta = clock.getDelta() * 1000; // ms
+      const deltaSeconds = delta / 1000;
+
+      shield.update(deltaSeconds);
+
       try {
-        const delta = clock.getDelta() * 1000; // ms
         updateShips(camera, scene, delta, shield);
 
         chimneySmoke.update();
@@ -341,6 +345,7 @@ function Scene() {
 
           gunBarrel.rotation.y +=
             (baseYaw + yawOffset - gunBarrel.rotation.y) * 0.1;
+
           gunBarrel.rotation.x +=
             (basePitch + pitchOffset - gunBarrel.rotation.x) * 0.1;
 
