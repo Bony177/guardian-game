@@ -78,9 +78,13 @@ export function updateShipAttack(ship, delta, shield) {
 
   if (ship.attackCooldown <= 0) {
     createBeam(ship, shield);
-    ship.fireTimer = 0.6;
-    shield.flash();
-    ship.isFiring = true;
+   // 🔴 GLOW ON STRIKE (only once)
+  shield.material.emissive.set(0xff0000);
+  shield.material.emissiveIntensity = 3.0;
+  shield.hitFlashTimer = 0.15;
+
+  ship.fireTimer = 0.6;
+  ship.isFiring = true;
 
     
   }
