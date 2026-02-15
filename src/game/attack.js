@@ -33,6 +33,7 @@ function ensureAttackState(ship) {
 
 export function updateShipAttack(ship, delta, shield) {
   ensureAttackState(ship);
+ 
 
   // If ship not alive → remove beam completely
   if (!ship.mesh || ship.state !== "alive") {
@@ -47,13 +48,21 @@ export function updateShipAttack(ship, delta, shield) {
   const isMoving = ship.isMoving === true;
 
   if (isMoving) {
-    removeBeam(ship);
-    return;
-  }
+  removeBeam(ship);
+  ship.isFiring = false;
+  ship.fireTimer = 0;
+  return;
+}
+
 
   // If currently firing
   if (ship.isFiring) {
     ship.fireTimer -= deltaSeconds;
+
+     // ONLY damage while beam exists
+  if (ship.beam) {
+    shield.takeDamage(getDamage(ship.type) * deltaSeconds);
+  }
 
     if (ship.fireTimer <= 0) {
       removeBeam(ship);
@@ -70,9 +79,10 @@ export function updateShipAttack(ship, delta, shield) {
   if (ship.attackCooldown <= 0) {
     createBeam(ship, shield);
     ship.fireTimer = 0.6;
+    shield.flash();
     ship.isFiring = true;
 
-    shield.takeDamage(getDamage(ship.type));
+    
   }
 }
 

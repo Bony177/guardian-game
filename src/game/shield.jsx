@@ -6,7 +6,7 @@ export function createShield() {
     maxHealth: 100,
     object: new THREE.Group(),
     hitFlashTimer: 0,
-    baseEmissive: 0.6,
+    baseEmissive: 0.3,
   };
 
   const geometry = new THREE.SphereGeometry(12, 64, 64);
@@ -34,6 +34,11 @@ export function createShield() {
   shield.takeDamage = (amount) => {
     shield.health -= amount;
     shield.health = Math.max(shield.health, 0);
+  };
+
+  // ✅ FLASH FUNCTION (now in correct place)
+  shield.flash = () => {
+    if (!shield.material) return;
 
     shield.material.emissiveIntensity = 3.0;
     shield.hitFlashTimer = 0.15;

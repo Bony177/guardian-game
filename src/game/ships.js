@@ -60,6 +60,8 @@ const SHIP_TYPES = {
   },
 };
 
+const GROUND_LEVEL = -5;
+const MIN_SHIP_HEIGHT = GROUND_LEVEL + 2;
 
 
 // ================= position gun =================
@@ -230,6 +232,11 @@ export function spawnShip(scene,camera) {
     mesh.scale.setScalar(type.scale);
     mesh.position.copy(spawn.position);
     console.log("Ship spawned at:", mesh.position);
+    // Clamp ship above terrain
+    if (mesh.position.y < MIN_SHIP_HEIGHT) {
+    mesh.position.y = MIN_SHIP_HEIGHT;
+    }
+
 
     // Orient so the ship's local +X axis points toward the shield center.
 const dirToShield = new THREE.Vector3()
@@ -282,6 +289,37 @@ const dirToShield = new THREE.Vector3()
 }
 
 
+function clampShipHorizontal(ship, camera) {
+  const basis = getCameraBasis(camera);
+
+  const distance = camera.position.distanceTo(ship.mesh.position);
+
+  const halfHeight =
+    Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * distance;
+
+  const halfWidth = halfHeight * camera.aspect;
+
+  const center = camera.position
+    .clone()
+    .addScaledVector(basis.forward, distance);
+
+  const offset = ship.mesh.position.clone().sub(center);
+
+  const rightAmount = offset.dot(basis.right);
+
+  const maxRight = halfWidth * 0.9;
+
+  if (rightAmount > maxRight) {
+    ship.mesh.position.addScaledVector(basis.right, maxRight - rightAmount);
+  }
+
+  if (rightAmount < -maxRight) {
+    ship.mesh.position.addScaledVector(basis.right, -maxRight - rightAmount);
+  }
+}
+
+
+
 export function updateShips(camera, scene, delta, shield) {
   spawnTimer += delta;
 
@@ -316,6 +354,9 @@ export function updateShips(camera, scene, delta, shield) {
 
   if (ship.isMoving) {
     ship.mesh.position.add(ship.moveDir);
+    clampShipHorizontal(ship, camera);
+
+
     ship.moveTimer -= deltaSeconds;
 
     if (ship.moveTimer <= 0) {
@@ -366,7 +407,6 @@ export function updateShips(camera, scene, delta, shield) {
 
 
 export function damageShip(hitObject, scene) {
-
   let mesh = hitObject;
 
   // Find root ship mesh
@@ -377,17 +417,37 @@ export function damageShip(hitObject, scene) {
   const ship = activeShips.find(s => s.mesh === mesh);
   if (!ship || ship.state !== "alive" || !ship.mesh) return;
 
-  // Centralized attack cleanup in attack.js
-
-
   ship.health -= 15;
-
   ship.healthBar.scale.x = ship.health / ship.maxHealth;
 
   if (ship.health <= 0) {
     ship.state = "dying";
     ship.fallSpeed = 0.02;
+    ship.isFiring = false;
+ship.fireTimer = 0;
+
     ship.healthBar.visible = false;
+
+    // Remove beam immediately
+    if (ship.beam) {
+      if (ship.beam.parent) {
+        ship.beam.parent.remove(ship.beam);
+      }
+
+      if (ship.beam.geometry) {
+        ship.beam.geometry.dispose();
+      }
+
+      if (ship.beam.material) {
+        if (Array.isArray(ship.beam.material)) {
+          ship.beam.material.forEach(m => m.dispose());
+        } else {
+          ship.beam.material.dispose();
+        }
+      }
+
+      ship.beam = null;
+    }
   }
 }
 
