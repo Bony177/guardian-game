@@ -2,7 +2,13 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { createChimneySmoke } from "./object/smoke";
-import { spawnShip, updateShips, damageShip, getShipMeshes } from "./ships";
+import {
+  spawnShip,
+  updateShips,
+  damageShip,
+  getShipMeshes,
+  getActiveShipCount,
+} from "./ships";
 import { createShield } from "./shield";
 
 function Scene() {
@@ -284,6 +290,42 @@ function Scene() {
       (err) => console.error("Gun barrel load error", err),
     );
 
+    function updateRadarUI() {
+      const count = getActiveShipCount();
+
+      if (count !== lastRadarCount) {
+        lastRadarCount = count;
+
+        const enemyNumber = document.getElementById("enemyNumber");
+        if (enemyNumber) {
+          enemyNumber.textContent = count.toString().padStart(2, "0");
+        }
+
+        generateRadarDots(count);
+      }
+    }
+
+    function generateRadarDots(count) {
+      const container = document.getElementById("dots");
+      if (!container) return;
+
+      container.innerHTML = "";
+
+      for (let i = 0; i < count; i++) {
+        const dot = document.createElement("div");
+        dot.classList.add("dot");
+
+        // Keep dots inside margins
+        const x = 5 + Math.random() * 90;
+        const y = 10 + Math.random() * 75;
+
+        dot.style.left = `${x}%`;
+        dot.style.top = `${y}%`;
+
+        container.appendChild(dot);
+      }
+    }
+
     // VAULT
     const vault = new THREE.Mesh(
       new THREE.BoxGeometry(4, 4, 4),
@@ -307,18 +349,21 @@ function Scene() {
     //shield.position.y = -5;
     //shield.position.z = -10;
     //scene.add(shield);
+    let lastRadarCount = -1;
 
     // ANIMATION
     function animate() {
+      requestAnimationFrame(animate);
+
       const delta = clock.getDelta() * 1000; // ms
       const deltaSeconds = delta / 1000;
 
-      shield.update(deltaSeconds);
-
       try {
         updateShips(camera, scene, delta, shield);
-
+        shield.update(deltaSeconds);
         chimneySmoke.update();
+
+        updateRadarUI(); // AFTER ships update
 
         if (gunBarrel) {
           if (isRecoiling) {
@@ -361,7 +406,6 @@ function Scene() {
         console.error("Animation frame error:", e);
       }
 
-      requestAnimationFrame(animate);
       renderer.render(scene, camera);
     }
 

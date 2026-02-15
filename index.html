@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,4 +12,37 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
+
+  <div class="radar-panel">
+  <div class="radar-header">
+    <div class="title">THREAT SCAN</div>
+    <div class="enemy-count">ENEMIES : <span id="enemyNumber">08</span></div>
+  </div>
+
+  <div class="radar-body">
+    <div class="grid"></div>
+    <div class="scan-line"></div>
+    <div class="dots" id="dots"></div>
+  </div>
+
+  <div class="radar-footer">
+    <div class="signal">
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar"></div>
+      <div class="bar dim"></div>
+    </div>
+
+    <div class="range">
+      <span>⚠ RANGE</span>
+      <div class="range-bars">
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </html>
+

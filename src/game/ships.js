@@ -424,7 +424,7 @@ export function damageShip(hitObject, scene) {
     ship.state = "dying";
     ship.fallSpeed = 0.02;
     ship.isFiring = false;
-ship.fireTimer = 0;
+    ship.fireTimer = 0;
 
     ship.healthBar.visible = false;
 
@@ -488,4 +488,9 @@ function destroyShip(ship, scene) {
   // small delay before attempting to spawn replacement
   //setTimeout(() => spawnShip(scene,camera), 1200);
 }
+
+export function getActiveShipCount() {
+  return activeShips.filter(s => s.state === "alive").length;
+}
+
 
