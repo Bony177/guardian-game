@@ -62,6 +62,7 @@ function Scene() {
     let skyDome = null;
     let terrain = null;
     let gunBarrel = null;
+    let building = null;
     let barrelBaseZ = 0;
     let muzzleFlashLeft = null;
     let muzzleFlashRight = null;
@@ -160,10 +161,7 @@ function Scene() {
     shield.object.position.set(0, -5, -10);
     scene.add(shield.object);
 
-    const chimneySmoke = createChimneySmoke(
-      scene,
-      new THREE.Vector3(12, 0, 0),
-    );
+    const chimneySmoke = createChimneySmoke(scene, new THREE.Vector3(12, 0, 0));
 
     const gunGroup = new THREE.Group();
     scene.add(gunGroup);
@@ -297,14 +295,76 @@ function Scene() {
       (err) => console.error("Gun barrel load error", err),
     );
 
-    const vault = new THREE.Mesh(
-      new THREE.BoxGeometry(4, 4, 4),
-      new THREE.MeshStandardMaterial({ color: 0x4444ff, roughness: 0.5 }),
+    const vaultLoader = new GLTFLoader();
+
+    let vault = null;
+
+    vaultLoader.load(
+      "/models/vault.glb", // <-- put your model path here
+      (gltf) => {
+        vault = gltf.scene;
+
+        // Adjust scale to fit your world
+        vault.scale.set(6, 6, 6);
+        vault.rotation.y = Math.PI / 2; // 90° rotate
+
+        // Fixed world position
+        vault.position.set(0, 2, 0);
+
+        vault.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+
+            // optional: better lighting response
+            if (child.material) {
+              child.material.roughness = 0.6;
+              child.material.metalness = 0.2;
+            }
+          }
+        });
+
+        scene.add(vault);
+        console.log("✅ Vault model loaded");
+      },
+      undefined,
+      (err) => console.error("❌ Vault load error", err),
     );
-    vault.position.y = 2;
-    vault.castShadow = true;
-    vault.receiveShadow = true;
-    scene.add(vault);
+
+    //bulding load
+
+    const gltfLoader = new GLTFLoader();
+    function loadBuilding(path, position, scale, rotationY = 0) {
+      gltfLoader.load(
+        path,
+        (gltf) => {
+          if (disposed) {
+            disposeObject3D(gltf.scene);
+            return;
+          }
+
+          const model = gltf.scene;
+          building = model;
+
+          model.scale.set(scale, scale, scale);
+          model.position.copy(position);
+          model.rotation.y = rotationY;
+
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+
+          scene.add(model);
+          console.log(`Loaded building: ${path}`);
+        },
+        undefined,
+        (err) => console.error(`Error loading building: ${path}`, err),
+      );
+    }
+    loadBuilding("/models/bl1.glb", new THREE.Vector3(4, 4, 4), 10);
 
     spawnShip(scene, camera, shipSessionId);
     spawnShip(scene, camera, shipSessionId);
@@ -366,7 +426,8 @@ function Scene() {
 
         const yawOffset = -mouseX * 0.8;
         const pitchOffset = -mouseY * 0.4;
-        gunBarrel.rotation.y += (baseYaw + yawOffset - gunBarrel.rotation.y) * 0.1;
+        gunBarrel.rotation.y +=
+          (baseYaw + yawOffset - gunBarrel.rotation.y) * 0.1;
         gunBarrel.rotation.x +=
           (basePitch + pitchOffset - gunBarrel.rotation.x) * 0.1;
         gunBarrel.rotation.x = THREE.MathUtils.clamp(
@@ -416,6 +477,10 @@ function Scene() {
       if (skyDome) {
         scene.remove(skyDome);
         disposeObject3D(skyDome);
+      }
+      if (building) {
+        scene.remove(building);
+        disposeObject3D(building);
       }
 
       disposeObject3D(scene);
