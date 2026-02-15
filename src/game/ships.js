@@ -10,6 +10,7 @@ const gltfLoader = new GLTFLoader();
 const modelCache = new Map();
 let inFlightLoads = 0;
 const MAX_CONCURRENT_LOADS = 3;
+let currentSessionId = 0;
 
 function loadGLTF(url) {
   // store promise in cache so multiple requests share the same load
@@ -79,7 +80,6 @@ const MIN_SPAWN_SEPARATION = 4;
 // ================= STATE =================
 let shipIdCounter = 0;
 const activeShips = [];
-let score = 0;
 
 const shipsDestroyedByType = { 1: 0, 2: 0, 3: 0 };
 
@@ -87,6 +87,65 @@ const shipsDestroyedByType = { 1: 0, 2: 0, 3: 0 };
 
 let spawnTimer = 0;
 const SPAWN_INTERVAL = 1200; // milliseconds
+
+function disposeMaterial(material) {
+  if (!material) return;
+  const materials = Array.isArray(material) ? material : [material];
+
+  for (const mat of materials) {
+    if (!mat) continue;
+    if (mat.map) mat.map.dispose();
+    if (mat.lightMap) mat.lightMap.dispose();
+    if (mat.emissiveMap) mat.emissiveMap.dispose();
+    if (mat.bumpMap) mat.bumpMap.dispose();
+    if (mat.normalMap) mat.normalMap.dispose();
+    if (mat.roughnessMap) mat.roughnessMap.dispose();
+    if (mat.metalnessMap) mat.metalnessMap.dispose();
+    if (mat.alphaMap) mat.alphaMap.dispose();
+    if (mat.aoMap) mat.aoMap.dispose();
+    mat.dispose();
+  }
+}
+
+function disposeObject3D(root) {
+  if (!root) return;
+  root.traverse((child) => {
+    if (!child.isMesh) return;
+    if (child.geometry) child.geometry.dispose();
+    disposeMaterial(child.material);
+  });
+}
+
+export function startShipsSession() {
+  currentSessionId += 1;
+  return currentSessionId;
+}
+
+export function stopShipsSession(sessionId) {
+  if (sessionId === currentSessionId) {
+    currentSessionId += 1;
+  }
+}
+
+export function resetShips() {
+  for (const ship of activeShips) {
+    if (ship.beam) {
+      if (ship.beam.parent) ship.beam.parent.remove(ship.beam);
+      if (ship.beam.geometry) ship.beam.geometry.dispose();
+      disposeMaterial(ship.beam.material);
+      ship.beam = null;
+    }
+
+    if (ship.mesh) {
+      if (ship.mesh.parent) ship.mesh.parent.remove(ship.mesh);
+      disposeObject3D(ship.mesh);
+    }
+  }
+
+  activeShips.length = 0;
+  inFlightLoads = 0;
+  spawnTimer = 0;
+}
 
 function getCameraBasis(camera) {
   const forward = new THREE.Vector3();
@@ -192,7 +251,9 @@ function pickShipType() {
   return 1;
 }
 
-export function spawnShip(scene,camera) {
+export function spawnShip(scene, camera, sessionId = currentSessionId) {
+  if (sessionId !== currentSessionId) return;
+
   const typeId = pickShipType();
   const type = SHIP_TYPES[typeId];
 
@@ -227,6 +288,12 @@ export function spawnShip(scene,camera) {
   inFlightLoads++;
 
   loadGLTF(type.model).then((gltf) => {
+    if (sessionId !== currentSessionId) {
+      const idx = activeShips.indexOf(placeholder);
+      if (idx !== -1) activeShips.splice(idx, 1);
+      return;
+    }
+
     const mesh = gltf.scene.clone(true);
 
     mesh.scale.setScalar(type.scale);
@@ -320,21 +387,23 @@ function clampShipHorizontal(ship, camera) {
 
 
 
-export function updateShips(camera, scene, delta, shield) {
+export function updateShips(camera, scene, delta, shield, sessionId = currentSessionId) {
+  if (sessionId !== currentSessionId) return;
+
   spawnTimer += delta;
 
   
   
 
   if (spawnTimer > SPAWN_INTERVAL && activeShips.length < MAX_ACTIVE_SHIPS) {
-    spawnShip(scene,camera);
+    spawnShip(scene, camera, sessionId);
     spawnTimer = 0;
   }
 
   // Ensure we try to maintain the minimum number of active ships,
   // but pace spawns to avoid launching many loads in one frame.
   if (activeShips.length + inFlightLoads < MIN_ACTIVE_SHIPS && activeShips.length < MAX_ACTIVE_SHIPS) {
-    spawnShip(scene,camera);
+    spawnShip(scene, camera, sessionId);
   }
 
   for (let i = activeShips.length - 1; i >= 0; i--) {
@@ -406,7 +475,7 @@ export function updateShips(camera, scene, delta, shield) {
 
 
 
-export function damageShip(hitObject, scene) {
+export function damageShip(hitObject) {
   let mesh = hitObject;
 
   // Find root ship mesh
@@ -479,7 +548,6 @@ function destroyShip(ship, scene) {
     scene.remove(ship.mesh);
   }
 
-  score += ship.points;
   shipsDestroyedByType[ship.type]++;
 
   const idx = activeShips.indexOf(ship);

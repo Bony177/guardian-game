@@ -8,92 +8,134 @@ import {
   damageShip,
   getShipMeshes,
   getActiveShipCount,
+  startShipsSession,
+  stopShipsSession,
+  resetShips,
 } from "./ships";
 import { createShield } from "./shield";
+
+function disposeMaterial(material) {
+  if (!material) return;
+  const materials = Array.isArray(material) ? material : [material];
+
+  for (const mat of materials) {
+    if (!mat) continue;
+    if (mat.map) mat.map.dispose();
+    if (mat.lightMap) mat.lightMap.dispose();
+    if (mat.emissiveMap) mat.emissiveMap.dispose();
+    if (mat.bumpMap) mat.bumpMap.dispose();
+    if (mat.normalMap) mat.normalMap.dispose();
+    if (mat.roughnessMap) mat.roughnessMap.dispose();
+    if (mat.metalnessMap) mat.metalnessMap.dispose();
+    if (mat.alphaMap) mat.alphaMap.dispose();
+    if (mat.aoMap) mat.aoMap.dispose();
+    mat.dispose();
+  }
+}
+
+function disposeObject3D(root) {
+  if (!root) return;
+  root.traverse((child) => {
+    if (!child.isMesh) return;
+    if (child.geometry) child.geometry.dispose();
+    disposeMaterial(child.material);
+  });
+}
 
 function Scene() {
   const mountRef = useRef(null);
 
-  let mouseX = 0;
-  let mouseY = 0;
-
-  const baseYaw = -Math.PI / 2; // fixes sideways barrel
-  const basePitch = -0.6;
-
-  let targetYaw = mouseX * 0.8;
-  let targetPitch = 0;
-
-  let recoilOffset = 0;
-  let isRecoiling = false;
-  let barrelBaseZ = 0;
-  const clock = new THREE.Clock();
-
-  let muzzleFlashLeft = null;
-  let muzzleFlashRight = null;
-  let muzzleVideo = null;
-  let videoTexture = null;
-
   useEffect(() => {
+    if (!mountRef.current) return undefined;
+    const mountNode = mountRef.current;
+
     console.log("Scene mounted");
 
-    if (!mountRef.current) {
-      console.error("Mount ref not available");
-      return;
-    }
+    let disposed = false;
+    let rafId = null;
+    let lastRadarCount = -1;
+    const timeoutIds = [];
+
+    let scene = null;
+    let camera = null;
+    let renderer = null;
+    let skyDome = null;
+    let terrain = null;
+    let gunBarrel = null;
+    let barrelBaseZ = 0;
+    let muzzleFlashLeft = null;
+    let muzzleFlashRight = null;
+    let muzzleVideo = null;
+    let videoTexture = null;
+
+    let mouseX = 0;
+    let mouseY = 0;
+    const baseYaw = -Math.PI / 2;
+    const basePitch = -0.6;
+    let recoilOffset = 0;
+    let isRecoiling = false;
+
+    const clock = new THREE.Clock();
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
+    const shipSessionId = startShipsSession();
 
     const onDoubleClick = (e) => {
+      if (!scene || !camera || disposed) return;
+
       recoilOffset = 0.2;
       isRecoiling = true;
-      // mouse NDC
+
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-      // raycast
       raycaster.setFromCamera(mouse, camera);
 
       const shipMeshes = getShipMeshes();
       const intersects = raycaster.intersectObjects(shipMeshes, true);
-
       if (intersects.length > 0) {
-        damageShip(intersects[0].object, scene);
-        console.log("HIT SHIP"); // 🔥 debug confirmation
+        damageShip(intersects[0].object);
       }
 
       if (muzzleVideo && muzzleFlashLeft && muzzleFlashRight) {
         muzzleVideo.currentTime = 0;
-
         const playPromise = muzzleVideo.play();
         if (playPromise !== undefined) {
-          playPromise
-            .then(() => console.log("✅ Video playing"))
-            .catch((error) => console.error("❌ Video play failed:", error));
+          playPromise.catch((error) =>
+            console.error("Video play failed:", error),
+          );
         }
 
         muzzleFlashLeft.visible = true;
         muzzleFlashRight.visible = true;
 
-        setTimeout(() => {
-          muzzleFlashLeft.visible = false;
-          muzzleFlashRight.visible = false;
+        const timeoutId = window.setTimeout(() => {
+          if (muzzleFlashLeft) muzzleFlashLeft.visible = false;
+          if (muzzleFlashRight) muzzleFlashRight.visible = false;
         }, 120);
+        timeoutIds.push(timeoutId);
       }
     };
 
-    window.addEventListener("dblclick", onDoubleClick);
-
-    window.addEventListener("mousemove", (e) => {
+    const onMouseMove = (e) => {
       mouseX = (e.clientX / window.innerWidth) * 2 - 1;
       mouseY = (e.clientY / window.innerHeight) * 2 - 1;
-    });
+    };
 
-    // SCENE
-    const scene = new THREE.Scene();
-    console.log("✅ Scene created");
+    const onResize = () => {
+      if (!camera || !renderer || disposed) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
 
-    // CAMERA
-    const camera = new THREE.PerspectiveCamera(
+    window.addEventListener("dblclick", onDoubleClick);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("resize", onResize);
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0f1f, 0.03);
+
+    camera = new THREE.PerspectiveCamera(
       60,
       window.innerWidth / window.innerHeight,
       0.1,
@@ -101,92 +143,65 @@ function Scene() {
     );
     camera.position.set(0, 10, 20);
     camera.lookAt(0, 0, 0);
-    console.log("✅ Camera created at", camera.position);
 
-    // RENDERER
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: false,
-    });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x1a1a1a);
     renderer.shadowMap.enabled = true;
-    mountRef.current.appendChild(renderer.domElement);
-    console.log(
-      "✅ Renderer created and mounted, size:",
-      window.innerWidth,
-      "x",
-      window.innerHeight,
-    );
+    mountNode.appendChild(renderer.domElement);
 
-    // LIGHTING
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(10, 20, 10);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
+    const shield = createShield();
+    shield.object.position.set(0, -5, -10);
+    scene.add(shield.object);
+
+    const chimneySmoke = createChimneySmoke(
+      scene,
+      new THREE.Vector3(12, 0, 0),
+    );
+
+    const gunGroup = new THREE.Group();
+    scene.add(gunGroup);
+
     const loader = new GLTFLoader();
-    spawnShip(scene, camera);
-    spawnShip(scene, camera);
 
     loader.load(
       "/models/terrain.glb",
       (gltf) => {
-        const terrain = gltf.scene;
+        if (disposed) {
+          disposeObject3D(gltf.scene);
+          return;
+        }
+        terrain = gltf.scene;
         terrain.scale.set(40, 40, 40);
         terrain.position.set(0, -5, -5);
-
         terrain.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
           }
         });
-
         scene.add(terrain);
-        console.log("Terrain model loaded");
       },
       undefined,
       (error) => console.error("Error loading terrain", error),
     );
 
-    scene.fog = new THREE.FogExp2(
-      0x0a0f1f, // fog color
-      0.03, // density (small number!)
-    );
-
-    //scebe
-    const shield = createShield();
-    shield.object.position.set(0, -5, -10);
-    scene.add(shield.object);
-
-    //scene.fog = new THREE.Fog(
-    //0x0a0f1f, // fog color
-    //20, // start distance
-    //0.03,
-    // 120, // end distance
-    //);
-
-    //CHINY SMOKEEE
-    const chimneySmoke = createChimneySmoke(
-      scene,
-      new THREE.Vector3(12, 0, 0), // vent position
-    );
-
-    // SKY DOME
-    const skyLoader = new GLTFLoader();
-    let skyDome = null;
-
-    skyLoader.load(
+    loader.load(
       "/models/space.glb",
       (gltf) => {
+        if (disposed) {
+          disposeObject3D(gltf.scene);
+          return;
+        }
         skyDome = gltf.scene;
         skyDome.scale.set(100, 100, 100);
         skyDome.position.set(0, 0, 0);
-
         skyDome.traverse((child) => {
           if (child.isMesh) {
             child.material.side = THREE.BackSide;
@@ -195,60 +210,53 @@ function Scene() {
             child.receiveShadow = false;
           }
         });
-
         scene.add(skyDome);
-        console.log("✅ Sky dome added");
       },
       undefined,
-      (err) => console.error("❌ Sky dome load error", err),
+      (err) => console.error("Sky dome load error", err),
     );
 
-    // GUN GROUP
-    const gunGroup = new THREE.Group();
-    scene.add(gunGroup);
-
-    const gltfLoader = new GLTFLoader();
-    let gunBase = null;
-    let gunBarrel = null;
-
-    // GUN BASE
-    gltfLoader.load(
+    loader.load(
       "/models/gun_base.glb",
       (gltf) => {
-        gunBase = gltf.scene;
+        if (disposed) {
+          disposeObject3D(gltf.scene);
+          return;
+        }
+
+        const gunBase = gltf.scene;
         gunBase.scale.set(12, 12, 12);
         gunBase.position.set(0, 0, 12);
         gunBase.rotation.x = -0.6;
-
         gunBase.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
           }
         });
-
         gunGroup.add(gunBase);
       },
       undefined,
       (err) => console.error("Gun base load error", err),
     );
 
-    // GUN BARREL
-    gltfLoader.load(
+    loader.load(
       "/models/gun_barrel.glb",
       (gltf) => {
+        if (disposed) {
+          disposeObject3D(gltf.scene);
+          return;
+        }
+
         gunBarrel = gltf.scene;
         gunBarrel.scale.set(8, 8, 8);
         gunBarrel.position.set(0, 0.5, 10);
         barrelBaseZ = gunBarrel.position.z;
-
         gunBarrel.rotation.x = -0.6;
         gunBarrel.rotation.y = 1;
-
         gunBarrel.traverse((child) => {
           if (child.isMesh) child.castShadow = true;
         });
-
         gunGroup.add(gunBarrel);
 
         const video = document.createElement("video");
@@ -259,6 +267,7 @@ function Scene() {
         video.preload = "auto";
         video.crossOrigin = "anonymous";
         video.load();
+        muzzleVideo = video;
 
         videoTexture = new THREE.VideoTexture(video);
         videoTexture.minFilter = THREE.LinearFilter;
@@ -272,15 +281,13 @@ function Scene() {
           depthWrite: false,
         });
 
-        muzzleVideo = video;
-
         muzzleFlashLeft = new THREE.Sprite(muzzleMaterial);
         muzzleFlashLeft.scale.set(2, 2, 1);
         muzzleFlashLeft.position.set(-0.3, 0.2, 0.5);
         muzzleFlashLeft.visible = false;
         gunBarrel.add(muzzleFlashLeft);
 
-        muzzleFlashRight = new THREE.Sprite(muzzleMaterial);
+        muzzleFlashRight = new THREE.Sprite(muzzleMaterial.clone());
         muzzleFlashRight.scale.set(2, 2, 1);
         muzzleFlashRight.position.set(0.3, 0.2, 0.5);
         muzzleFlashRight.visible = false;
@@ -290,43 +297,6 @@ function Scene() {
       (err) => console.error("Gun barrel load error", err),
     );
 
-    function updateRadarUI() {
-      const count = getActiveShipCount();
-
-      if (count !== lastRadarCount) {
-        lastRadarCount = count;
-
-        const enemyNumber = document.getElementById("enemyNumber");
-        if (enemyNumber) {
-          enemyNumber.textContent = count.toString().padStart(2, "0");
-        }
-
-        generateRadarDots(count);
-      }
-    }
-
-    function generateRadarDots(count) {
-      const container = document.getElementById("dots");
-      if (!container) return;
-
-      container.innerHTML = "";
-
-      for (let i = 0; i < count; i++) {
-        const dot = document.createElement("div");
-        dot.classList.add("dot");
-
-        // Keep dots inside margins
-        const x = 5 + Math.random() * 90;
-        const y = 10 + Math.random() * 75;
-
-        dot.style.left = `${x}%`;
-        dot.style.top = `${y}%`;
-
-        container.appendChild(dot);
-      }
-    }
-
-    // VAULT
     const vault = new THREE.Mesh(
       new THREE.BoxGeometry(4, 4, 4),
       new THREE.MeshStandardMaterial({ color: 0x4444ff, roughness: 0.5 }),
@@ -336,87 +306,130 @@ function Scene() {
     vault.receiveShadow = true;
     scene.add(vault);
 
-    // SHIELD
-    //const shield = new THREE.Mesh(
-    //new THREE.SphereGeometry(13, 32, 32),
-    //new THREE.MeshStandardMaterial({
-    //color: 0x00ffff,
-    //transparent: true,
-    //opacity: 0.3,
-    //roughness: 0.3,
-    //}),
-    //);
-    //shield.position.y = -5;
-    //shield.position.z = -10;
-    //scene.add(shield);
-    let lastRadarCount = -1;
+    spawnShip(scene, camera, shipSessionId);
+    spawnShip(scene, camera, shipSessionId);
 
-    // ANIMATION
+    function generateRadarDots(count) {
+      const container = document.getElementById("dots");
+      if (!container) return;
+      container.innerHTML = "";
+      for (let i = 0; i < count; i += 1) {
+        const dot = document.createElement("div");
+        dot.classList.add("dot");
+        dot.style.left = `${5 + Math.random() * 90}%`;
+        dot.style.top = `${10 + Math.random() * 75}%`;
+        container.appendChild(dot);
+      }
+    }
+
+    function updateRadarUI() {
+      const count = getActiveShipCount();
+      if (count !== lastRadarCount) {
+        lastRadarCount = count;
+        const enemyNumber = document.getElementById("enemyNumber");
+        if (enemyNumber) {
+          enemyNumber.textContent = count.toString().padStart(2, "0");
+        }
+        generateRadarDots(count);
+      }
+    }
+
     function animate() {
-      requestAnimationFrame(animate);
+      if (disposed) return;
+      rafId = window.requestAnimationFrame(animate);
 
-      const delta = clock.getDelta() * 1000; // ms
-      const deltaSeconds = delta / 1000;
+      const deltaMs = clock.getDelta() * 1000;
+      const deltaSeconds = deltaMs / 1000;
 
-      try {
-        updateShips(camera, scene, delta, shield);
-        shield.update(deltaSeconds);
-        chimneySmoke.update();
+      updateShips(camera, scene, deltaMs, shield, shipSessionId);
+      shield.update(deltaSeconds);
+      chimneySmoke.update();
+      updateRadarUI();
 
-        updateRadarUI(); // AFTER ships update
-
-        if (gunBarrel) {
-          if (isRecoiling) {
-            gunBarrel.position.z +=
-              (barrelBaseZ + recoilOffset - gunBarrel.position.z) * 0.3;
-
-            if (
-              Math.abs(gunBarrel.position.z - (barrelBaseZ + recoilOffset)) <
-              0.01
-            ) {
-              recoilOffset = 0;
-            }
-          } else {
-            gunBarrel.position.z += (barrelBaseZ - gunBarrel.position.z) * 0.2;
+      if (gunBarrel) {
+        if (isRecoiling) {
+          gunBarrel.position.z +=
+            (barrelBaseZ + recoilOffset - gunBarrel.position.z) * 0.3;
+          if (
+            Math.abs(gunBarrel.position.z - (barrelBaseZ + recoilOffset)) < 0.01
+          ) {
+            recoilOffset = 0;
           }
-
-          if (Math.abs(gunBarrel.position.z - barrelBaseZ) < 0.01) {
-            gunBarrel.position.z = barrelBaseZ;
-            isRecoiling = false;
-          }
-
-          const yawOffset = -mouseX * 0.8;
-          const pitchOffset = -mouseY * 0.4;
-
-          gunBarrel.rotation.y +=
-            (baseYaw + yawOffset - gunBarrel.rotation.y) * 0.1;
-
-          gunBarrel.rotation.x +=
-            (basePitch + pitchOffset - gunBarrel.rotation.x) * 0.1;
-
-          gunBarrel.rotation.x = THREE.MathUtils.clamp(
-            gunBarrel.rotation.x,
-            basePitch - 0.3,
-            basePitch + 0.2,
-          );
+        } else {
+          gunBarrel.position.z += (barrelBaseZ - gunBarrel.position.z) * 0.2;
         }
 
-        if (videoTexture) videoTexture.needsUpdate = true;
-      } catch (e) {
-        console.error("Animation frame error:", e);
+        if (Math.abs(gunBarrel.position.z - barrelBaseZ) < 0.01) {
+          gunBarrel.position.z = barrelBaseZ;
+          isRecoiling = false;
+        }
+
+        const yawOffset = -mouseX * 0.8;
+        const pitchOffset = -mouseY * 0.4;
+        gunBarrel.rotation.y += (baseYaw + yawOffset - gunBarrel.rotation.y) * 0.1;
+        gunBarrel.rotation.x +=
+          (basePitch + pitchOffset - gunBarrel.rotation.x) * 0.1;
+        gunBarrel.rotation.x = THREE.MathUtils.clamp(
+          gunBarrel.rotation.x,
+          basePitch - 0.3,
+          basePitch + 0.2,
+        );
       }
+
+      if (videoTexture) videoTexture.needsUpdate = true;
 
       renderer.render(scene, camera);
     }
 
-    console.log("✅ Starting animation loop");
+    console.log("Starting animation loop");
     animate();
 
     return () => {
-      if (mountRef.current && mountRef.current.contains(renderer.domElement)) {
-        mountRef.current.removeChild(renderer.domElement);
+      disposed = true;
+      stopShipsSession(shipSessionId);
+
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
       }
-      renderer.dispose();
+
+      for (const timeoutId of timeoutIds) {
+        window.clearTimeout(timeoutId);
+      }
+
+      window.removeEventListener("dblclick", onDoubleClick);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("resize", onResize);
+
+      if (muzzleVideo) {
+        muzzleVideo.pause();
+        muzzleVideo.removeAttribute("src");
+        muzzleVideo.load();
+      }
+      if (videoTexture) videoTexture.dispose();
+
+      resetShips();
+
+      if (terrain) {
+        scene.remove(terrain);
+        disposeObject3D(terrain);
+      }
+      if (skyDome) {
+        scene.remove(skyDome);
+        disposeObject3D(skyDome);
+      }
+
+      disposeObject3D(scene);
+      if (renderer) {
+        renderer.renderLists.dispose();
+        renderer.dispose();
+        renderer.forceContextLoss();
+      }
+
+      if (mountNode && renderer?.domElement) {
+        if (mountNode.contains(renderer.domElement)) {
+          mountNode.removeChild(renderer.domElement);
+        }
+      }
     };
   }, []);
 
