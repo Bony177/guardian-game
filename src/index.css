@@ -78,7 +78,7 @@ body {
   bottom: 20px;
   left: 20px;
   width: 300px;
-  height: 200px;
+  height: 230px;
   padding: 10px;
   font-family: 'Orbitron', sans-serif;
   background: linear-gradient(145deg, rgba(0,30,60,0.8), rgba(0,15,30,0.9));
@@ -99,11 +99,43 @@ body {
   text-shadow: 0 0 10px #00eaff;
 }
 
+.shield-status {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.shield-label,
+.shield-value {
+  color: #9ef6ff;
+  text-shadow: 0 0 6px rgba(0, 234, 255, 0.8);
+}
+
+.shield-track {
+  height: 8px;
+  border: 1px solid rgba(0, 255, 255, 0.5);
+  background: rgba(0, 40, 70, 0.7);
+  box-shadow: inset 0 0 6px rgba(0, 180, 255, 0.25);
+  overflow: hidden;
+}
+
+.shield-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #00d4ff 0%, #00ffaa 100%);
+  box-shadow: 0 0 8px rgba(0, 220, 255, 0.9);
+  transition: width 0.12s linear;
+}
+
 /* Radar Body */
 .radar-body {
   position: relative;
-  margin-top: 0px;
-  height: 150px;
+  margin-top: 8px;
+  height: 135px;
   border: 1px solid rgba(0,255,255,0.4);
   overflow: hidden;
 }
@@ -204,4 +236,3 @@ body {
   background: #00eaff;
   box-shadow: 0 0 6px #00eaff;
 }
-

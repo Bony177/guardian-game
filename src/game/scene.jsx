@@ -61,6 +61,7 @@ function Scene() {
     let disposed = false;
     let rafId = null;
     let lastRadarCount = -1;
+    let lastShieldPercent = -1;
     const timeoutIds = [];
 
     let scene = null;
@@ -87,6 +88,8 @@ function Scene() {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const shipSessionId = startShipsSession();
+    const shieldHealthFill = document.getElementById("shieldHealthFill");
+    const shieldHealthValue = document.getElementById("shieldHealthValue");
 
     const onDoubleClick = (e) => {
       if (!scene || !camera || disposed) return;
@@ -467,6 +470,21 @@ function Scene() {
       }
     }
 
+    function updateShieldUI() {
+      const ratio = THREE.MathUtils.clamp(shield.health / shield.maxHealth, 0, 1);
+      const percent = Math.round(ratio * 100);
+
+      if (percent === lastShieldPercent) return;
+      lastShieldPercent = percent;
+
+      if (shieldHealthFill) {
+        shieldHealthFill.style.width = `${percent}%`;
+      }
+      if (shieldHealthValue) {
+        shieldHealthValue.textContent = `${percent}%`;
+      }
+    }
+
     function animate() {
       if (disposed) return;
       rafId = window.requestAnimationFrame(animate);
@@ -478,6 +496,7 @@ function Scene() {
       shield.update(deltaSeconds);
       chimneySmoke.update();
       updateRadarUI();
+      updateShieldUI();
 
       if (gunBarrel) {
         if (isRecoiling) {
