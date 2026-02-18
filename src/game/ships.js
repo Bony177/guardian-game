@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { initAttackState, updateShipAttack } from "./attack";
-import { attachEngines, updateEngines, spawnTrail } from "./engineFX";
+import { attachEngines, disposeEngines, updateEngines } from "./engineFX";
 
 
 
@@ -134,6 +134,8 @@ export function stopShipsSession(sessionId) {
 
 export function resetShips() {
   for (const ship of activeShips) {
+    disposeEngines(ship);
+
     if (ship.beam) {
       if (ship.beam.parent) ship.beam.parent.remove(ship.beam);
       if (ship.beam.geometry) ship.beam.geometry.dispose();
@@ -454,7 +456,7 @@ export function updateShips(camera, scene, delta, shield, sessionId = currentSes
       ship.moveTimer = THREE.MathUtils.randFloat(1, 3);
     }
   }
-  updateEngines(ship, deltaSeconds);
+  updateEngines(ship, deltaSeconds, scene);
 
 
   updateShipAttack(ship, delta, shield);
@@ -542,6 +544,7 @@ export function getShipMeshes() {
 
 
 function destroyShip(ship, scene) {
+  disposeEngines(ship);
 
 
   // dispose geometry/materials/textures to avoid memory/GPU leaks
