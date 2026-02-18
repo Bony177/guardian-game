@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 export function createSpriteExplosion(scene, position) {
+  const FX_LAYER = 4;
   const loader = new THREE.TextureLoader();
   const texture = loader.load("/textures/explosion.png"); // your 8x8 sprite sheet
 
@@ -10,12 +11,15 @@ export function createSpriteExplosion(scene, position) {
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
+    opacity: 0.2, 
     depthWrite: false,
   });
 
   const sprite = new THREE.Sprite(material);
   sprite.position.copy(position);
   sprite.scale.set(3, 3, 1);
+  sprite.renderOrder = FX_LAYER;
+  sprite.layers.set(FX_LAYER);
 
   scene.add(sprite);
 
