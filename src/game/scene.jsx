@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { createChimneySmoke } from "./object/smoke";
+import { createSpriteExplosion } from "./spriteexplosion";
+
 import {
   spawnShip,
   updateShips,
@@ -44,9 +46,10 @@ function disposeObject3D(root) {
 
 const RENDER_LAYER = {
   BUILDINGS: 0,
-  SHIELD: 1,
-  GUN: 2,
-  FX: 3,
+  MIST: 1,
+  SHIELD: 2,
+  GUN: 3,
+  FX: 4,
 };
 
 function Scene() {
@@ -63,6 +66,7 @@ function Scene() {
     let lastRadarCount = -1;
     let lastShieldPercent = -1;
     const timeoutIds = [];
+    const activeExplosions = [];
 
     let scene = null;
     let camera = null;
@@ -104,7 +108,15 @@ function Scene() {
       const shipMeshes = getShipMeshes();
       const intersects = raycaster.intersectObjects(shipMeshes, true);
       if (intersects.length > 0) {
-        damageShip(intersects[0].object);
+        const hitObject = intersects[0].object;
+
+        damageShip(hitObject);
+
+        const worldPos = new THREE.Vector3();
+        hitObject.getWorldPosition(worldPos);
+
+        const explosion = createSpriteExplosion(scene, worldPos);
+        activeExplosions.push(explosion);
       }
 
       if (muzzleVideo && muzzleFlashLeft && muzzleFlashRight) {
@@ -203,19 +215,19 @@ function Scene() {
       opacity: 1,
       depthWrite: false,
       blending: THREE.NormalBlending,
-      color: new THREE.Color(0x3366aa),
+      color: new THREE.Color(0x2a4d66),
     });
 
-    const mistGeometry = new THREE.PlaneGeometry(30, 30);
+    const mistGeometry = new THREE.PlaneGeometry(35, 35);
     const mistPlane = new THREE.Mesh(mistGeometry, mistMaterial);
 
     mistPlane.rotation.x = -Math.PI / 2;
 
     // Center around vault + buildings cluster
-    mistPlane.position.set(0, -4.8, -5);
+    mistPlane.position.set(0, -4.8, -9);
 
-    mistPlane.renderOrder = RENDER_LAYER.BUILDINGS;
-    mistPlane.layers.set(RENDER_LAYER.BUILDINGS);
+    mistPlane.renderOrder = RENDER_LAYER.MIST;
+    mistPlane.layers.set(RENDER_LAYER.MIST);
 
     scene.add(mistPlane);
 
@@ -571,9 +583,19 @@ function Scene() {
       }
 
       if (videoTexture) videoTexture.needsUpdate = true;
+      for (let i = activeExplosions.length - 1; i >= 0; i--) {
+        const stillAlive = activeExplosions[i].update(deltaSeconds);
+        if (!stillAlive) {
+          activeExplosions.splice(i, 1);
+        }
+      }
 
       renderer.clear();
       camera.layers.set(RENDER_LAYER.BUILDINGS);
+      renderer.render(scene, camera);
+
+      renderer.clearDepth();
+      camera.layers.set(RENDER_LAYER.MIST);
       renderer.render(scene, camera);
 
       renderer.clearDepth();
