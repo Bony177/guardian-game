@@ -75,6 +75,9 @@ const SPAWN_HORIZONTAL_VIEW_FILL = 0.75;
 const SPAWN_VERTICAL_VIEW_FILL = 0.6;
 const SPAWN_ATTEMPTS = 40;
 const MIN_SPAWN_SEPARATION = 4;
+const HEALTH_BAR_WIDTH = 1.5;
+const HEALTH_BAR_HEIGHT = 0.2;
+const HEALTH_BAR_WORLD_Y_OFFSET = 1.5;
 
 
 // ================= STATE =================
@@ -326,12 +329,16 @@ const dirToShield = new THREE.Vector3()
 
     scene.add(mesh);
 
+    const healthBarAnchor = new THREE.Group();
+    healthBarAnchor.position.set(0, HEALTH_BAR_WORLD_Y_OFFSET / type.scale, 0);
+    healthBarAnchor.scale.setScalar(1 / type.scale);
+    mesh.add(healthBarAnchor);
+
     const healthBar = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.5, 0.2),
+      new THREE.PlaneGeometry(HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT),
       new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
     );
-    healthBar.position.set(0, 1.5, 0);
-    mesh.add(healthBar);
+    healthBarAnchor.add(healthBar);
 
     placeholder.mesh = mesh;
     placeholder.healthBar = healthBar;
