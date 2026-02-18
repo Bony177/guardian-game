@@ -2,6 +2,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { initAttackState, updateShipAttack } from "./attack";
+import { attachEngines, updateEngines, spawnTrail } from "./engineFX";
+
 
 
 const gltfLoader = new GLTFLoader();
@@ -298,6 +300,8 @@ export function spawnShip(scene, camera, sessionId = currentSessionId) {
     }
 
     const mesh = gltf.scene.clone(true);
+    
+
 
     mesh.scale.setScalar(type.scale);
     mesh.position.copy(spawn.position);
@@ -345,6 +349,8 @@ const dirToShield = new THREE.Vector3()
     placeholder.state = "alive";
 
     initAttackState(placeholder);
+    attachEngines(placeholder);
+
 
 
     // fill in placeholder
@@ -448,6 +454,8 @@ export function updateShips(camera, scene, delta, shield, sessionId = currentSes
       ship.moveTimer = THREE.MathUtils.randFloat(1, 3);
     }
   }
+  updateEngines(ship, deltaSeconds);
+
 
   updateShipAttack(ship, delta, shield);
 
