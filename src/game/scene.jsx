@@ -42,6 +42,13 @@ function disposeObject3D(root) {
   });
 }
 
+const RENDER_LAYER = {
+  BUILDINGS: 0,
+  SHIELD: 1,
+  GUN: 2,
+  FX: 3,
+};
+
 function Scene() {
   const mountRef = useRef(null);
 
@@ -148,17 +155,34 @@ function Scene() {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x1a1a1a);
+    renderer.autoClear = false;
     renderer.shadowMap.enabled = true;
     mountNode.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    ambientLight.layers.enableAll();
+    scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.layers.enableAll();
     directionalLight.position.set(10, 20, 10);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
+    const terrainGroundY = -5;
     const shield = createShield();
-    shield.object.position.set(0, -5, -10);
+    // For an upper hemisphere, the rim lies on center Y, so centerY = groundY.
+    const shieldCenterY = terrainGroundY;
+    shield.object.position.set(0, shieldCenterY, -8);
+    shield.object.renderOrder = RENDER_LAYER.SHIELD;
+    shield.object.layers.set(RENDER_LAYER.SHIELD);
+    shield.object.traverse((child) => {
+      child.renderOrder = RENDER_LAYER.SHIELD;
+      child.layers.set(RENDER_LAYER.SHIELD);
+    });
+    if (shield.material) {
+      shield.material.depthTest = true;
+      shield.material.depthWrite = false;
+    }
     scene.add(shield.object);
 
     const chimneySmoke = createChimneySmoke(scene, new THREE.Vector3(12, 0, 0));
@@ -178,7 +202,11 @@ function Scene() {
         terrain = gltf.scene;
         terrain.scale.set(40, 40, 40);
         terrain.position.set(0, -5, -5);
+        terrain.renderOrder = RENDER_LAYER.BUILDINGS;
+        terrain.layers.set(RENDER_LAYER.BUILDINGS);
         terrain.traverse((child) => {
+          child.renderOrder = RENDER_LAYER.BUILDINGS;
+          child.layers.set(RENDER_LAYER.BUILDINGS);
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
@@ -226,11 +254,22 @@ function Scene() {
         gunBase.scale.set(12, 12, 12);
         gunBase.position.set(0, 0, 12);
         gunBase.rotation.x = -0.6;
+        // Put gun base on top of shield: set renderOrder=2 and keep depthTest enabled
+        gunBase.renderOrder = RENDER_LAYER.GUN;
+        gunBase.layers.set(RENDER_LAYER.GUN);
         gunBase.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            // Keep depthTest enabled and allow depth writing for opaque gun geometry
+            if (child.material) {
+              child.material.depthTest = true;
+              child.material.depthWrite = true;
+            }
           }
+          // apply renderOrder to all children so they draw in the correct sequence
+          child.renderOrder = RENDER_LAYER.GUN;
+          child.layers.set(RENDER_LAYER.GUN);
         });
         gunGroup.add(gunBase);
       },
@@ -252,8 +291,20 @@ function Scene() {
         barrelBaseZ = gunBarrel.position.z;
         gunBarrel.rotation.x = -0.6;
         gunBarrel.rotation.y = 1;
+        // Put gun barrel on top of shield (above gun base)
+        gunBarrel.renderOrder = RENDER_LAYER.GUN;
+        gunBarrel.layers.set(RENDER_LAYER.GUN);
         gunBarrel.traverse((child) => {
-          if (child.isMesh) child.castShadow = true;
+          if (child.isMesh) {
+            child.castShadow = true;
+            // Keep depthTest enabled for correct occlusion against other opaque objects
+            if (child.material) {
+              child.material.depthTest = true;
+              child.material.depthWrite = true;
+            }
+          }
+          child.renderOrder = RENDER_LAYER.GUN;
+          child.layers.set(RENDER_LAYER.GUN);
         });
         gunGroup.add(gunBarrel);
 
@@ -283,12 +334,25 @@ function Scene() {
         muzzleFlashLeft.scale.set(2, 2, 1);
         muzzleFlashLeft.position.set(-0.3, 0.2, 0.5);
         muzzleFlashLeft.visible = false;
+        // Draw muzzle sprites above everything else (sprites remain additive/translucent)
+        muzzleFlashLeft.renderOrder = RENDER_LAYER.FX;
+        muzzleFlashLeft.layers.set(RENDER_LAYER.FX);
+        if (muzzleFlashLeft.material) {
+          muzzleFlashLeft.material.depthTest = true;
+          muzzleFlashLeft.material.depthWrite = false;
+        }
         gunBarrel.add(muzzleFlashLeft);
 
         muzzleFlashRight = new THREE.Sprite(muzzleMaterial.clone());
         muzzleFlashRight.scale.set(2, 2, 1);
         muzzleFlashRight.position.set(0.3, 0.2, 0.5);
         muzzleFlashRight.visible = false;
+        muzzleFlashRight.renderOrder = RENDER_LAYER.FX;
+        muzzleFlashRight.layers.set(RENDER_LAYER.FX);
+        if (muzzleFlashRight.material) {
+          muzzleFlashRight.material.depthTest = true;
+          muzzleFlashRight.material.depthWrite = false;
+        }
         gunBarrel.add(muzzleFlashRight);
       },
       undefined,
@@ -305,13 +369,17 @@ function Scene() {
         vault = gltf.scene;
 
         // Adjust scale to fit your world
-        vault.scale.set(6, 6, 6);
+        vault.scale.set(7, 7, 7);
         vault.rotation.y = Math.PI / 2; // 90° rotate
 
         // Fixed world position
         vault.position.set(0, 2, 0);
+        vault.renderOrder = RENDER_LAYER.BUILDINGS;
+        vault.layers.set(RENDER_LAYER.BUILDINGS);
 
         vault.traverse((child) => {
+          child.renderOrder = RENDER_LAYER.BUILDINGS;
+          child.layers.set(RENDER_LAYER.BUILDINGS);
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
@@ -334,7 +402,7 @@ function Scene() {
     //bulding load
 
     const gltfLoader = new GLTFLoader();
-    function loadBuilding(path, position, scale, rotationY = 0) {
+    function loadBuilding(path, position, scale, rotationY = Math.PI) {
       gltfLoader.load(
         path,
         (gltf) => {
@@ -349,12 +417,16 @@ function Scene() {
           model.scale.set(scale, scale, scale);
           model.position.copy(position);
           model.rotation.y = rotationY;
+          model.renderOrder = RENDER_LAYER.BUILDINGS;
+          model.layers.set(RENDER_LAYER.BUILDINGS);
 
           model.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
               child.receiveShadow = true;
             }
+            child.renderOrder = RENDER_LAYER.BUILDINGS;
+            child.layers.set(RENDER_LAYER.BUILDINGS);
           });
 
           scene.add(model);
@@ -364,7 +436,8 @@ function Scene() {
         (err) => console.error(`Error loading building: ${path}`, err),
       );
     }
-    loadBuilding("/models/bl1.glb", new THREE.Vector3(4, 4, 4), 10);
+    loadBuilding("/models/bl5.glb", new THREE.Vector3(4, 3, 4), 4);
+    loadBuilding("/models/bl6.glb", new THREE.Vector3(-4, 3, 4), 5);
 
     spawnShip(scene, camera, shipSessionId);
     spawnShip(scene, camera, shipSessionId);
@@ -439,6 +512,20 @@ function Scene() {
 
       if (videoTexture) videoTexture.needsUpdate = true;
 
+      renderer.clear();
+      camera.layers.set(RENDER_LAYER.BUILDINGS);
+      renderer.render(scene, camera);
+
+      renderer.clearDepth();
+      camera.layers.set(RENDER_LAYER.SHIELD);
+      renderer.render(scene, camera);
+
+      renderer.clearDepth();
+      camera.layers.set(RENDER_LAYER.GUN);
+      renderer.render(scene, camera);
+
+      renderer.clearDepth();
+      camera.layers.set(RENDER_LAYER.FX);
       renderer.render(scene, camera);
     }
 
