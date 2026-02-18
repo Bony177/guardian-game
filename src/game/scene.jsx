@@ -471,7 +471,11 @@ function Scene() {
     }
 
     function updateShieldUI() {
-      const ratio = THREE.MathUtils.clamp(shield.health / shield.maxHealth, 0, 1);
+      const ratio = THREE.MathUtils.clamp(
+        shield.health / shield.maxHealth,
+        0,
+        1,
+      );
       const percent = Math.round(ratio * 100);
 
       if (percent === lastShieldPercent) return;
@@ -493,6 +497,13 @@ function Scene() {
       const deltaSeconds = deltaMs / 1000;
 
       updateShips(camera, scene, deltaMs, shield, shipSessionId);
+      // 🎥 Camera shake when shield destroyed
+      if (shield.isDestroyed && shield.destroyTimer < 1.3) {
+        const shakeAmount = 0.15 * (1 - shield.destroyTimer / 1.3);
+        camera.position.x += (Math.random() - 0.5) * shakeAmount;
+        camera.position.y += (Math.random() - 0.5) * shakeAmount;
+      }
+
       shield.update(deltaSeconds);
       chimneySmoke.update();
       updateRadarUI();
