@@ -190,6 +190,35 @@ function Scene() {
 
     const chimneySmoke = createChimneySmoke(scene, new THREE.Vector3(12, 0, 0));
 
+    // ======================
+    // 🌌 Circular Mist Zone
+    // ======================
+
+    const textureLoader = new THREE.TextureLoader();
+    const mistTexture = textureLoader.load("/textures/mist_circle.png");
+
+    const mistMaterial = new THREE.MeshBasicMaterial({
+      map: mistTexture,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      color: new THREE.Color(0x3366aa),
+    });
+
+    const mistGeometry = new THREE.PlaneGeometry(30, 30);
+    const mistPlane = new THREE.Mesh(mistGeometry, mistMaterial);
+
+    mistPlane.rotation.x = -Math.PI / 2;
+
+    // Center around vault + buildings cluster
+    mistPlane.position.set(0, -4.8, -5);
+
+    mistPlane.renderOrder = RENDER_LAYER.BUILDINGS;
+    mistPlane.layers.set(RENDER_LAYER.BUILDINGS);
+
+    scene.add(mistPlane);
+
     const gunGroup = new THREE.Group();
     scene.add(gunGroup);
 
@@ -506,6 +535,7 @@ function Scene() {
 
       shield.update(deltaSeconds);
       chimneySmoke.update();
+
       updateRadarUI();
       updateShieldUI();
 
