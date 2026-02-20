@@ -408,16 +408,16 @@ function Scene() {
     let vault = null;
 
     vaultLoader.load(
-      "/models/vault.glb", // <-- put your model path here
+      "/models/vault1.glb", // <-- put your model path here
       (gltf) => {
         vault = gltf.scene;
 
         // Adjust scale to fit your world
-        vault.scale.set(7, 7, 7);
-        vault.rotation.y = Math.PI / 2; // 90° rotate
+        vault.scale.set(17, 17, 17);
+        vault.rotation.y = -Math.PI / 2; // -90° rotate
 
         // Fixed world position
-        vault.position.set(0, 2, 0);
+        vault.position.set(0, 1.5, 0);
         vault.renderOrder = RENDER_LAYER.BUILDINGS;
         vault.layers.set(RENDER_LAYER.BUILDINGS);
 
@@ -425,8 +425,8 @@ function Scene() {
           child.renderOrder = RENDER_LAYER.BUILDINGS;
           child.layers.set(RENDER_LAYER.BUILDINGS);
           if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
+            //child.castShadow = true;
+            //child.receiveShadow = true;
 
             // optional: better lighting response
             if (child.material) {
@@ -473,15 +473,15 @@ function Scene() {
             child.layers.set(RENDER_LAYER.BUILDINGS);
           });
 
-          scene.add(model);
+          //scene.add(model);
           console.log(`Loaded building: ${path}`);
         },
         undefined,
         (err) => console.error(`Error loading building: ${path}`, err),
       );
     }
-    loadBuilding("/models/bl5.glb", new THREE.Vector3(4, 3, 4), 4);
-    loadBuilding("/models/bl6.glb", new THREE.Vector3(-4, 3, 4), 5);
+    //loadBuilding("/models/bl5.glb", new THREE.Vector3(4, 3, 4), 4);
+    //loadBuilding("/models/bl6.glb", new THREE.Vector3(-4, 3, 4), 5);
 
     spawnShip(scene, camera, shipSessionId);
     spawnShip(scene, camera, shipSessionId);
