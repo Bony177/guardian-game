@@ -198,9 +198,68 @@ function Scene() {
       shield.material.depthTest = true;
       shield.material.depthWrite = false;
     }
-    scene.add(shield.object);
+    //scene.add(shield.object);
 
     const chimneySmoke = createChimneySmoke(scene, new THREE.Vector3(12, 0, 0));
+
+    function createRadialFadeTexture(size = 1012) {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext("2d");
+
+      if (!context) return null;
+
+      const center = size / 2;
+      const gradient = context.createRadialGradient(
+        center,
+        center,
+        size * 0.12,
+        center,
+        center,
+        size * 0.5,
+      );
+      gradient.addColorStop(0, "rgba(255, 255, 255, 0.7)");
+      gradient.addColorStop(0.55, "rgba(255, 255, 255, 0.3)");
+      gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+      context.clearRect(0, 0, size, size);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, size, size);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+
+      return texture;
+    }
+
+    function createGroundShadow(size, opacity, position) {
+      const shadowTexture = createRadialFadeTexture();
+      if (!shadowTexture) return null;
+
+      const shadowMaterial = new THREE.MeshBasicMaterial({
+        map: shadowTexture,
+        transparent: true,
+        opacity,
+        color: new THREE.Color(0x000000),
+        depthWrite: false,
+        depthTest: true,
+        blending: THREE.NormalBlending,
+      });
+
+      const shadow = new THREE.Mesh(
+        new THREE.PlaneGeometry(size.x, size.y),
+        shadowMaterial,
+      );
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.copy(position);
+      shadow.renderOrder = RENDER_LAYER.BUILDINGS;
+      shadow.layers.set(RENDER_LAYER.BUILDINGS);
+      return shadow;
+    }
 
     // ======================
     // 🌌 Circular Mist Zone
@@ -218,18 +277,61 @@ function Scene() {
       color: new THREE.Color(0x2a4d66),
     });
 
-    const mistGeometry = new THREE.PlaneGeometry(35, 35);
+    const mistGeometry = new THREE.PlaneGeometry(100, 100);
     const mistPlane = new THREE.Mesh(mistGeometry, mistMaterial);
 
     mistPlane.rotation.x = -Math.PI / 2;
 
-    // Center around vault + buildings cluster
-    mistPlane.position.set(0, -4.8, -9);
-
-    mistPlane.renderOrder = RENDER_LAYER.MIST;
-    mistPlane.layers.set(RENDER_LAYER.MIST);
+    // This plane is bound to the vault footprint once the vault model loads.
+    mistPlane.position.set(6, -3.8, 2);
+    mistPlane.visible = false;
+    mistPlane.renderOrder = RENDER_LAYER.BUILDINGS;
+    mistPlane.layers.set(RENDER_LAYER.BUILDINGS);
 
     scene.add(mistPlane);
+
+    const textureLoaderr = new THREE.TextureLoader();
+    const mistTexturer = textureLoaderr.load("/textures/mist_circle.png");
+
+    const mistMaterialr = new THREE.MeshBasicMaterial({
+      map: mistTexturer,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      color: new THREE.Color(0x2a4d66),
+    });
+
+    const mistGeometryr = new THREE.PlaneGeometry(120, 120);
+    const mistPlaner = new THREE.Mesh(mistGeometryr, mistMaterialr);
+
+    mistPlaner.rotation.x = -Math.PI / 2;
+
+    // This plane will be anchored to vault top once the model loads.
+    mistPlaner.position.set(2, -1.8, 0);
+    mistPlaner.visible = false;
+    mistPlaner.renderOrder = RENDER_LAYER.MIST;
+    mistPlaner.layers.set(RENDER_LAYER.MIST);
+
+    scene.add(mistPlaner);
+
+    const cityShadow = createGroundShadow(
+      new THREE.Vector2(34, 26),
+      0.35,
+      new THREE.Vector3(0, -4.9, -7),
+    );
+    if (cityShadow) {
+      scene.add(cityShadow);
+    }
+
+    const vaultShadow = createGroundShadow(
+      new THREE.Vector2(16, 16),
+      0.45,
+      new THREE.Vector3(0, -4.86, -0.4),
+    );
+    if (vaultShadow) {
+      scene.add(vaultShadow);
+    }
 
     const gunGroup = new THREE.Group();
     scene.add(gunGroup);
@@ -437,6 +539,47 @@ function Scene() {
         });
 
         scene.add(vault);
+
+        const vaultBounds = new THREE.Box3().setFromObject(vault);
+        const vaultCenter = new THREE.Vector3();
+        vaultBounds.getCenter(vaultCenter);
+        const vaultWidth = vaultBounds.max.x - vaultBounds.min.x;
+        const vaultDepth = vaultBounds.max.z - vaultBounds.min.z;
+        const vaultBaseY = vaultBounds.min.y + 0.04;
+        const vaultTopY = vaultBounds.max.y + 0.08;
+
+        mistPlane.position.set(vaultCenter.x, vaultBaseY, vaultCenter.z);
+        mistPlane.scale.set(vaultWidth / 35, vaultDepth / 35, 1);
+        mistPlane.visible = true;
+
+        // mistPlaner.position.set(vaultCenter.x, vaultTopY, vaultCenter.z);
+        mistPlaner.scale.set(vaultWidth / 100, vaultDepth / 100, 1);
+        mistPlaner.visible = true;
+
+        const vaultBaseFadeTexture = createRadialFadeTexture();
+        if (vaultBaseFadeTexture) {
+          const vaultBaseFadeMaterial = new THREE.MeshBasicMaterial({
+            map: vaultBaseFadeTexture,
+            transparent: true,
+            opacity: 0.7,
+            depthWrite: false,
+            depthTest: true,
+            color: new THREE.Color(0x0f2940),
+            blending: THREE.NormalBlending,
+          });
+
+          const vaultBaseFade = new THREE.Mesh(
+            new THREE.PlaneGeometry(12, 12),
+            vaultBaseFadeMaterial,
+          );
+          vaultBaseFade.rotation.x = -Math.PI / 2;
+          // Slightly below vault pivot so the base seam fades into terrain fog.
+          vaultBaseFade.position.set(0, vault.position.y - 0.35, 0);
+          vaultBaseFade.renderOrder = RENDER_LAYER.BUILDINGS;
+          vaultBaseFade.layers.set(RENDER_LAYER.BUILDINGS);
+          scene.add(vaultBaseFade);
+        }
+
         console.log("✅ Vault model loaded");
       },
       undefined,
