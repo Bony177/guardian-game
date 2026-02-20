@@ -121,6 +121,19 @@ function disposeObject3D(root) {
   });
 }
 
+function disposeBeamObject(beam) {
+  if (!beam) return;
+
+  beam.traverse((child) => {
+    if (child === beam) return;
+    if (child.geometry) child.geometry.dispose();
+    disposeMaterial(child.material);
+  });
+
+  if (beam.geometry) beam.geometry.dispose();
+  disposeMaterial(beam.material);
+}
+
 export function startShipsSession() {
   currentSessionId += 1;
   return currentSessionId;
@@ -138,8 +151,7 @@ export function resetShips() {
 
     if (ship.beam) {
       if (ship.beam.parent) ship.beam.parent.remove(ship.beam);
-      if (ship.beam.geometry) ship.beam.geometry.dispose();
-      disposeMaterial(ship.beam.material);
+      disposeBeamObject(ship.beam);
       ship.beam = null;
     }
 
@@ -520,17 +532,7 @@ export function damageShip(hitObject) {
         ship.beam.parent.remove(ship.beam);
       }
 
-      if (ship.beam.geometry) {
-        ship.beam.geometry.dispose();
-      }
-
-      if (ship.beam.material) {
-        if (Array.isArray(ship.beam.material)) {
-          ship.beam.material.forEach(m => m.dispose());
-        } else {
-          ship.beam.material.dispose();
-        }
-      }
+      disposeBeamObject(ship.beam);
 
       ship.beam = null;
     }
