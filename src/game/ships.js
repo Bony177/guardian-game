@@ -525,6 +525,7 @@ export function damageShip(hitObject) {
     ship.fireTimer = 0;
 
     ship.healthBar.visible = false;
+    disposeEngines(ship);
 
     // Remove beam immediately
     if (ship.beam) {
