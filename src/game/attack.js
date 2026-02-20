@@ -1,11 +1,14 @@
 import * as THREE from "three";
 
 const ELECTRIC_BEAM = {
-  segments: 20,
-  amplitude: 0.13,
-  opacity: 0.65,
-  pulseSpeed: 18,
-  flickerSpeed: 32,
+  segments: 34,
+  amplitude: 0.2,
+  opacity: 0.78,
+  pulseSpeed: 24,
+  flickerSpeed: 44,
+  jitter: 0.06,
+  spikeChance: 0.22,
+  spikeBoost: 1.85,
 };
 
 // ================= INIT =================
@@ -184,22 +187,33 @@ function updateElectricBeam(beam, elapsed) {
   if (!fx) return;
 
   const halfLength = fx.length * 0.5;
+  const timeWarp = elapsed * ELECTRIC_BEAM.pulseSpeed;
 
   for (let i = 0; i <= fx.segmentCount; i++) {
     const t = i / fx.segmentCount;
     const y = -halfLength + t * fx.length;
     const envelope = Math.sin(Math.PI * t);
-    const amp = ELECTRIC_BEAM.amplitude * envelope;
+    let amp = ELECTRIC_BEAM.amplitude * envelope;
     const phase = fx.phaseOffsets[i];
+    if (i !== 0 && i !== fx.segmentCount && Math.random() < ELECTRIC_BEAM.spikeChance) {
+      amp *= ELECTRIC_BEAM.spikeBoost;
+    }
+
+    const jitterX = THREE.MathUtils.randFloatSpread(ELECTRIC_BEAM.jitter * 2) * envelope;
+    const jitterZ = THREE.MathUtils.randFloatSpread(ELECTRIC_BEAM.jitter * 2) * envelope;
 
     const x =
-      (Math.sin(elapsed * ELECTRIC_BEAM.pulseSpeed + phase * 2.1) * 0.7 +
-        Math.sin(elapsed * (ELECTRIC_BEAM.pulseSpeed * 2.4) + phase) * 0.3) *
-      amp;
+      (Math.sin(timeWarp + phase * 2.1) * 0.6 +
+        Math.sin(timeWarp * 2.9 + phase * 0.8) * 0.28 +
+        Math.sin(timeWarp * 4.6 + phase * 1.7) * 0.12) *
+        amp +
+      jitterX;
     const z =
-      (Math.cos(elapsed * (ELECTRIC_BEAM.pulseSpeed * 1.7) + phase * 1.3) * 0.7 +
-        Math.sin(elapsed * (ELECTRIC_BEAM.pulseSpeed * 2.8) + phase * 0.6) * 0.3) *
-      amp;
+      (Math.cos(timeWarp * 1.8 + phase * 1.3) * 0.58 +
+        Math.sin(timeWarp * 3.3 + phase * 0.55) * 0.3 +
+        Math.cos(timeWarp * 5.1 + phase * 2.0) * 0.12) *
+        amp +
+      jitterZ;
 
     const idx = i * 3;
     fx.points[idx] = x;
@@ -208,9 +222,14 @@ function updateElectricBeam(beam, elapsed) {
   }
 
   fx.line.geometry.attributes.position.needsUpdate = true;
+  if (Math.random() < 0.35) {
+    fx.line.material.color.setHex(0xff6666);
+  } else {
+    fx.line.material.color.setHex(0xff2a2a);
+  }
   fx.line.material.opacity =
     ELECTRIC_BEAM.opacity +
-    Math.sin(elapsed * ELECTRIC_BEAM.flickerSpeed + fx.flickerOffset) * 0.2;
+    Math.sin(elapsed * ELECTRIC_BEAM.flickerSpeed + fx.flickerOffset) * 0.26;
 }
 
 // ================= REMOVE BEAM =================
