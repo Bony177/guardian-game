@@ -219,6 +219,11 @@ function Scene() {
     const basePitch = -0.6;
     let recoilOffset = 0;
     let isRecoiling = false;
+    const vaultGlowPulseTargets = [];
+    const seenVaultGlowMaterials = new Set();
+    const vaultGlowPulseSpeed = 2.4;
+    const vaultGlowPulseMin = 0.62;
+    const vaultGlowPulseMax = 2.18;
 
     const clock = new THREE.Clock();
     const raycaster = new THREE.Raycaster();
@@ -226,6 +231,24 @@ function Scene() {
     const shipSessionId = startShipsSession();
     const shieldHealthFill = document.getElementById("shieldHealthFill");
     const shieldHealthValue = document.getElementById("shieldHealthValue");
+
+    function registerVaultGlowPulseTargets(material) {
+      if (!material) return;
+      const materials = Array.isArray(material) ? material : [material];
+
+      for (const mat of materials) {
+        if (!mat || seenVaultGlowMaterials.has(mat)) continue;
+        if (!mat.emissive || !mat.emissive.isColor) continue;
+        if (typeof mat.emissiveIntensity !== "number") continue;
+        if (mat.emissiveIntensity <= 0) continue;
+
+        seenVaultGlowMaterials.add(mat);
+        vaultGlowPulseTargets.push({
+          material: mat,
+          baseIntensity: mat.emissiveIntensity,
+        });
+      }
+    }
 
     const onDoubleClick = (e) => {
       if (!scene || !camera || disposed) return;
@@ -745,6 +768,7 @@ function Scene() {
             if (child.material) {
               try {
                 applyVaultGlowToLightBlueMaterials(child.material);
+                registerVaultGlowPulseTargets(child.material);
                 child.material.roughness = 0.6;
                 child.material.metalness = 0.2;
                 child.material.needsUpdate = true;
@@ -955,6 +979,17 @@ function Scene() {
         const stillAlive = activeExplosions[i].update(deltaSeconds);
         if (!stillAlive) {
           activeExplosions.splice(i, 1);
+        }
+      }
+
+      if (vaultGlowPulseTargets.length > 0) {
+        const elapsed = clock.getElapsedTime();
+        const wave = (Math.sin(elapsed * vaultGlowPulseSpeed) + 1) * 0.5;
+        const pulseScale =
+          vaultGlowPulseMin + wave * (vaultGlowPulseMax - vaultGlowPulseMin);
+
+        for (const target of vaultGlowPulseTargets) {
+          target.material.emissiveIntensity = target.baseIntensity * pulseScale;
         }
       }
 
