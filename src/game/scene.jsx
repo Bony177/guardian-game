@@ -136,7 +136,7 @@ function applyVaultGlowToLightBlueMaterials(material) {
       if (glowMask) {
         mat.emissiveMap = glowMask;
         mat.emissive = new THREE.Color(0x2f8fff);
-        mat.emissiveIntensity = 1.15;
+        mat.emissiveIntensity = 7.15;
         appliedMaskedGlow = true;
       }
     }
