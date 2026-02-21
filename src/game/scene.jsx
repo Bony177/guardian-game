@@ -44,6 +44,121 @@ function disposeObject3D(root) {
   });
 }
 
+const vaultGlowMaskCache = new WeakMap();
+
+function createVaultGlowMaskFromMap(baseMap) {
+  if (!baseMap || !baseMap.image) return null;
+  if (vaultGlowMaskCache.has(baseMap)) return vaultGlowMaskCache.get(baseMap);
+
+  const image = baseMap.image;
+  const width = image.width || image.videoWidth;
+  const height = image.height || image.videoHeight;
+  if (!width || !height) return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+
+  try {
+    context.drawImage(image, 0, 0, width, height);
+  } catch (err) {
+    console.warn("Unable to draw vault texture for glow mask", err);
+    return null;
+  }
+
+  const imageData = context.getImageData(0, 0, width, height);
+  const pixels = imageData.data;
+
+  for (let i = 0; i < pixels.length; i += 4) {
+    const r = pixels[i] / 255;
+    const g = pixels[i + 1] / 255;
+    const b = pixels[i + 2] / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) * 0.5;
+    const d = max - min;
+    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+
+    let h = 0;
+    if (d !== 0) {
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h /= 6;
+      if (h < 0) h += 1;
+    }
+
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const isBlue = h >= 0.5 && h <= 0.68 && s >= 0.08;
+    const isBlueWhite = s <= 0.2 && l >= 0.72;
+    const isGlowingPixel = luminance >= 0.58 && (isBlue || isBlueWhite);
+
+    const maskStrength = isGlowingPixel
+      ? THREE.MathUtils.clamp((luminance - 0.56) / 0.34, 0, 1)
+      : 0;
+    const maskValue = Math.round(maskStrength * 255);
+
+    pixels[i] = maskValue;
+    pixels[i + 1] = maskValue;
+    pixels[i + 2] = maskValue;
+    pixels[i + 3] = 255;
+  }
+
+  context.putImageData(imageData, 0, 0);
+
+  const maskTexture = new THREE.CanvasTexture(canvas);
+  maskTexture.flipY = baseMap.flipY;
+  maskTexture.wrapS = baseMap.wrapS;
+  maskTexture.wrapT = baseMap.wrapT;
+  maskTexture.repeat.copy(baseMap.repeat);
+  maskTexture.offset.copy(baseMap.offset);
+  maskTexture.rotation = baseMap.rotation;
+  maskTexture.center.copy(baseMap.center);
+  maskTexture.needsUpdate = true;
+
+  vaultGlowMaskCache.set(baseMap, maskTexture);
+  return maskTexture;
+}
+
+function applyVaultGlowToLightBlueMaterials(material) {
+  if (!material) return;
+  const materials = Array.isArray(material) ? material : [material];
+
+  for (const mat of materials) {
+    if (!mat || !mat.color || !mat.color.isColor) continue;
+
+    let appliedMaskedGlow = false;
+    if (mat.map) {
+      const glowMask = createVaultGlowMaskFromMap(mat.map);
+      if (glowMask) {
+        mat.emissiveMap = glowMask;
+        mat.emissive = new THREE.Color(0x2f8fff);
+        mat.emissiveIntensity = 1.15;
+        appliedMaskedGlow = true;
+      }
+    }
+
+    if (!appliedMaskedGlow) {
+      const hsl = { h: 0, s: 0, l: 0 };
+      mat.color.getHSL(hsl);
+      const isBlueWhite = hsl.s <= 0.22 && hsl.l >= 0.7;
+      const isLightBluish =
+        hsl.h >= 0.5 &&
+        hsl.h <= 0.68 &&
+        hsl.s >= 0.08 &&
+        hsl.s <= 0.55 &&
+        hsl.l >= 0.56;
+      if (!(isBlueWhite || isLightBluish)) continue;
+      mat.emissive = new THREE.Color(0x1d6fff);
+      mat.emissiveIntensity = 0.26;
+    }
+    mat.needsUpdate = true;
+  }
+}
+
 const RENDER_LAYER = {
   BUILDINGS: 0,
   MIST: 1,
@@ -240,7 +355,7 @@ function Scene() {
       shield.material.depthTest = true;
       shield.material.depthWrite = false;
     }
-    scene.add(shield.object);
+    //scene.add(shield.object);
 
     const chimneySmoke = createChimneySmoke(scene, new THREE.Vector3(12, 0, 0));
 
@@ -586,6 +701,7 @@ function Scene() {
             // optional: better lighting response and ensure material updates
             if (child.material) {
               try {
+                applyVaultGlowToLightBlueMaterials(child.material);
                 child.material.roughness = 0.6;
                 child.material.metalness = 0.2;
                 child.material.needsUpdate = true;
@@ -916,7 +1032,6 @@ function Scene() {
         scene.remove(building);
         disposeObject3D(building);
       }
-
       disposeObject3D(scene);
       if (renderer) {
         renderer.renderLists.dispose();
