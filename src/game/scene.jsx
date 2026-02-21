@@ -52,6 +52,48 @@ const RENDER_LAYER = {
   FX: 4,
 };
 
+const VAULT_SHADOW_CONFIG = {
+  enabled: true,
+  opacity: 3,
+  widthScale: 1.18,
+  depthScale: 1.08,
+  useAbsoluteY: false,
+  y: 6,
+  yOffset: 0,
+  textureStrength: 1,
+  castShadow: true,
+  receiveShadow: true,
+  showBaseFade: false,
+};
+
+// Prevent accidental mutation from elsewhere and expose for debug
+try {
+  // keep an immutable snapshot for change detection
+  const __VAULT_SHADOW_CONFIG_SNAPSHOT = JSON.parse(
+    JSON.stringify(VAULT_SHADOW_CONFIG),
+  );
+  // expose for debugging in console
+  window.__VAULT_SHADOW_CONFIG = VAULT_SHADOW_CONFIG;
+  // shallow freeze to prevent accidental writes
+  Object.freeze(VAULT_SHADOW_CONFIG);
+  // watcher to detect silent mutations to the exposed object (defensive)
+  setInterval(() => {
+    try {
+      const current = JSON.parse(JSON.stringify(window.__VAULT_SHADOW_CONFIG));
+      if (
+        JSON.stringify(current) !==
+        JSON.stringify(__VAULT_SHADOW_CONFIG_SNAPSHOT)
+      ) {
+        console.warn("VAULT_SHADOW_CONFIG was mutated at runtime:", current);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, 2000);
+} catch (e) {
+  console.warn("Failed to freeze/expose VAULT_SHADOW_CONFIG", e);
+}
+
 function Scene() {
   const mountRef = useRef(null);
 
@@ -198,17 +240,18 @@ function Scene() {
       shield.material.depthTest = true;
       shield.material.depthWrite = false;
     }
-    //scene.add(shield.object);
+    scene.add(shield.object);
 
     const chimneySmoke = createChimneySmoke(scene, new THREE.Vector3(12, 0, 0));
 
-    function createRadialFadeTexture(size = 1012) {
+    function createRadialFadeTexture(size = 1012, strength = 0.7) {
       const canvas = document.createElement("canvas");
       canvas.width = size;
       canvas.height = size;
       const context = canvas.getContext("2d");
 
       if (!context) return null;
+      const clampedStrength = THREE.MathUtils.clamp(strength, 0, 1);
 
       const center = size / 2;
       const gradient = context.createRadialGradient(
@@ -219,8 +262,11 @@ function Scene() {
         center,
         size * 0.5,
       );
-      gradient.addColorStop(0, "rgba(255, 255, 255, 0.7)");
-      gradient.addColorStop(0.55, "rgba(255, 255, 255, 0.3)");
+      gradient.addColorStop(0, `rgba(255, 255, 255, ${clampedStrength})`);
+      gradient.addColorStop(
+        0.55,
+        `rgba(255, 255, 255, ${clampedStrength * 0.45})`,
+      );
       gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
 
       context.clearRect(0, 0, size, size);
@@ -236,8 +282,13 @@ function Scene() {
       return texture;
     }
 
-    function createGroundShadow(size, opacity, position) {
-      const shadowTexture = createRadialFadeTexture();
+    function createGroundShadow(
+      size,
+      opacity,
+      position,
+      textureStrength = 0.7,
+    ) {
+      const shadowTexture = createRadialFadeTexture(1012, textureStrength);
       if (!shadowTexture) return null;
 
       const shadowMaterial = new THREE.MeshBasicMaterial({
@@ -247,6 +298,9 @@ function Scene() {
         color: new THREE.Color(0x000000),
         depthWrite: false,
         depthTest: true,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -4,
         blending: THREE.NormalBlending,
       });
 
@@ -319,18 +373,10 @@ function Scene() {
       new THREE.Vector2(34, 26),
       0.35,
       new THREE.Vector3(0, -4.9, -7),
+      0.7,
     );
     if (cityShadow) {
       scene.add(cityShadow);
-    }
-
-    const vaultShadow = createGroundShadow(
-      new THREE.Vector2(16, 16),
-      0.45,
-      new THREE.Vector3(0, -4.86, -0.4),
-    );
-    if (vaultShadow) {
-      scene.add(vaultShadow);
     }
 
     const gunGroup = new THREE.Group();
@@ -508,6 +554,7 @@ function Scene() {
     const vaultLoader = new GLTFLoader();
 
     let vault = null;
+    let vaultShadow = null;
 
     vaultLoader.load(
       "/models/vault1.glb", // <-- put your model path here
@@ -523,17 +570,31 @@ function Scene() {
         vault.renderOrder = RENDER_LAYER.BUILDINGS;
         vault.layers.set(RENDER_LAYER.BUILDINGS);
 
+        // Log config at vault load to help debug overrides
+        console.log(
+          "VAULT_SHADOW_CONFIG (at vault load):",
+          VAULT_SHADOW_CONFIG,
+        );
         vault.traverse((child) => {
           child.renderOrder = RENDER_LAYER.BUILDINGS;
           child.layers.set(RENDER_LAYER.BUILDINGS);
           if (child.isMesh) {
-            //child.castShadow = true;
-            //child.receiveShadow = true;
+            // Enforce cast/receive shadow according to config
+            child.castShadow = !!VAULT_SHADOW_CONFIG.castShadow;
+            child.receiveShadow = !!VAULT_SHADOW_CONFIG.receiveShadow;
 
-            // optional: better lighting response
+            // optional: better lighting response and ensure material updates
             if (child.material) {
-              child.material.roughness = 0.6;
-              child.material.metalness = 0.2;
+              try {
+                child.material.roughness = 0.6;
+                child.material.metalness = 0.2;
+                child.material.needsUpdate = true;
+              } catch (e) {
+                console.warn(
+                  "Failed to set material properties on vault child",
+                  e,
+                );
+              }
             }
           }
         });
@@ -541,12 +602,50 @@ function Scene() {
         scene.add(vault);
 
         const vaultBounds = new THREE.Box3().setFromObject(vault);
+        // store bounds for runtime updates
+        vault.userData.vaultBounds = vaultBounds;
         const vaultCenter = new THREE.Vector3();
         vaultBounds.getCenter(vaultCenter);
         const vaultWidth = vaultBounds.max.x - vaultBounds.min.x;
         const vaultDepth = vaultBounds.max.z - vaultBounds.min.z;
         const vaultBaseY = vaultBounds.min.y + 0.04;
         const vaultTopY = vaultBounds.max.y + 0.08;
+
+        if (VAULT_SHADOW_CONFIG.enabled) {
+          const shadowSize = new THREE.Vector2(
+            vaultWidth * VAULT_SHADOW_CONFIG.widthScale,
+            vaultDepth * VAULT_SHADOW_CONFIG.depthScale,
+          );
+          const shadowPosition = new THREE.Vector3(
+            vaultCenter.x,
+            VAULT_SHADOW_CONFIG.useAbsoluteY
+              ? VAULT_SHADOW_CONFIG.y
+              : vaultBounds.min.y + VAULT_SHADOW_CONFIG.yOffset,
+            vaultCenter.z,
+          );
+          vaultShadow = createGroundShadow(
+            shadowSize,
+            VAULT_SHADOW_CONFIG.opacity,
+            shadowPosition,
+            VAULT_SHADOW_CONFIG.textureStrength,
+          );
+          if (vaultShadow) {
+            // Ensure shadow material matches config (in case defaults differ)
+            try {
+              if (vaultShadow.material) {
+                vaultShadow.material.opacity = VAULT_SHADOW_CONFIG.opacity;
+                // darker base if desired
+                vaultShadow.material.color = new THREE.Color(0x000000);
+                vaultShadow.material.needsUpdate = true;
+              }
+            } catch (e) {
+              console.warn("Failed to enforce vaultShadow material props", e);
+            }
+            scene.add(vaultShadow);
+            // keep reference for later tweaks
+            vault.userData.vaultShadow = vaultShadow;
+          }
+        }
 
         mistPlane.position.set(vaultCenter.x, vaultBaseY, vaultCenter.z);
         mistPlane.scale.set(vaultWidth / 35, vaultDepth / 35, 1);
@@ -557,7 +656,7 @@ function Scene() {
         mistPlaner.visible = true;
 
         const vaultBaseFadeTexture = createRadialFadeTexture();
-        if (vaultBaseFadeTexture) {
+        if (VAULT_SHADOW_CONFIG.showBaseFade && vaultBaseFadeTexture) {
           const vaultBaseFadeMaterial = new THREE.MeshBasicMaterial({
             map: vaultBaseFadeTexture,
             transparent: true,
@@ -730,6 +829,29 @@ function Scene() {
         const stillAlive = activeExplosions[i].update(deltaSeconds);
         if (!stillAlive) {
           activeExplosions.splice(i, 1);
+        }
+      }
+
+      // Enforce vault shadow config at runtime to prevent silent overrides
+      if (vault && vault.userData && vault.userData.vaultShadow) {
+        const vs = vault.userData.vaultShadow;
+        const bounds = vault.userData.vaultBounds;
+        try {
+          if (vs.material) {
+            if (vs.material.opacity !== VAULT_SHADOW_CONFIG.opacity) {
+              vs.material.opacity = VAULT_SHADOW_CONFIG.opacity;
+              vs.material.needsUpdate = true;
+            }
+            vs.material.color.set(0x000000);
+          }
+          if (bounds) {
+            const minY = bounds.min.y;
+            vs.position.y = VAULT_SHADOW_CONFIG.useAbsoluteY
+              ? VAULT_SHADOW_CONFIG.y
+              : minY + VAULT_SHADOW_CONFIG.yOffset;
+          }
+        } catch (e) {
+          console.warn("vault shadow enforcement failed", e);
         }
       }
 
