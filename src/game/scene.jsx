@@ -165,6 +165,7 @@ const RENDER_LAYER = {
   SHIELD: 2,
   GUN: 3,
   FX: 4,
+  CHIMNEY_SMOKE: 5,
 };
 
 const VAULT_SHADOW = {
@@ -353,11 +354,33 @@ function Scene() {
       shield.material.depthTest = true;
       shield.material.depthWrite = false;
     }
-    //scene.add(shield.object);
+    scene.add(shield.object);
 
-    const chimneySmoke = createChimneySmoke(scene, new THREE.Vector3(12, 0, 0));
+    const chimneySmokeConfigs = [
+      { position: new THREE.Vector3(3, 0, 0), opacity: 0.05, speed: 1 },
+      { position: new THREE.Vector3(-3, 2, 0), opacity: 0.02, speed: 1.2 },
+    ];
+    const chimneySmokes = chimneySmokeConfigs.map((config) =>
+      createChimneySmoke(scene, config),
+    );
+    const smokeUnderRenderOrder = RENDER_LAYER.BUILDINGS - 1;
+    chimneySmokes.forEach((smokeFx) => {
+      if (!smokeFx?.object) return;
+      smokeFx.object.renderOrder = smokeUnderRenderOrder;
+      smokeFx.object.layers.set(RENDER_LAYER.BUILDINGS);
+      smokeFx.object.traverse((child) => {
+        child.renderOrder = smokeUnderRenderOrder;
+        child.layers.set(RENDER_LAYER.BUILDINGS);
+        if (child.material) {
+          child.material.depthTest = true;
+          child.material.depthWrite = false;
+        }
+      });
+    });
 
-    function createRadialFadeTexture(size = 1012, strength = 0.7) {
+    // Add more smoke stacks by appending config objects to chimneySmokeConfigs.
+
+    function createRadialFadeTexture(size = 1012, strength = 0.4) {
       const canvas = document.createElement("canvas");
       canvas.width = size;
       canvas.height = size;
@@ -938,7 +961,7 @@ function Scene() {
       }
 
       shield.update(deltaSeconds);
-      chimneySmoke.update();
+      chimneySmokes.forEach((smokeFx) => smokeFx.update());
 
       updateRadarUI();
       updateShieldUI();
@@ -1006,6 +1029,10 @@ function Scene() {
       }
 
       renderer.clear();
+      camera.layers.set(RENDER_LAYER.CHIMNEY_SMOKE);
+      renderer.render(scene, camera);
+
+      renderer.clearDepth();
       camera.layers.set(RENDER_LAYER.BUILDINGS);
       renderer.render(scene, camera);
 
