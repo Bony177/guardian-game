@@ -204,7 +204,8 @@ function Scene() {
     let scene = null;
     let camera = null;
     let renderer = null;
-    let skyDome = null;
+    let backgroundTexture = null;
+    let skyBackdrop = null;
     let terrain = null;
     let gunBarrel = null;
     let building = null;
@@ -329,6 +330,20 @@ function Scene() {
     renderer.autoClear = false;
     renderer.shadowMap.enabled = true;
     mountNode.appendChild(renderer.domElement);
+
+    backgroundTexture = new THREE.TextureLoader().load("/textures/nightsky.jpg");
+    backgroundTexture.colorSpace = THREE.SRGBColorSpace;
+
+    const skyGeometry = new THREE.SphereGeometry(700, 64, 32);
+    const skyMaterial = new THREE.MeshBasicMaterial({
+      map: backgroundTexture,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    skyBackdrop = new THREE.Mesh(skyGeometry, skyMaterial);
+    skyBackdrop.renderOrder = -1000;
+    skyBackdrop.layers.set(RENDER_LAYER.CHIMNEY_SMOKE);
+    scene.add(skyBackdrop);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     ambientLight.layers.enableAll();
@@ -616,30 +631,6 @@ function Scene() {
       },
       undefined,
       (error) => console.error("Error loading terrain", error),
-    );
-
-    loader.load(
-      "/models/space.glb",
-      (gltf) => {
-        if (disposed) {
-          disposeObject3D(gltf.scene);
-          return;
-        }
-        skyDome = gltf.scene;
-        skyDome.scale.set(100, 100, 100);
-        skyDome.position.set(0, 0, 0);
-        skyDome.traverse((child) => {
-          if (child.isMesh) {
-            child.material.side = THREE.BackSide;
-            child.material.depthWrite = false;
-            child.castShadow = false;
-            child.receiveShadow = false;
-          }
-        });
-        scene.add(skyDome);
-      },
-      undefined,
-      (err) => console.error("Sky dome load error", err),
     );
 
     loader.load(
@@ -1085,10 +1076,6 @@ function Scene() {
         scene.remove(terrain);
         disposeObject3D(terrain);
       }
-      if (skyDome) {
-        scene.remove(skyDome);
-        disposeObject3D(skyDome);
-      }
       if (building) {
         scene.remove(building);
         disposeObject3D(building);
@@ -1100,6 +1087,13 @@ function Scene() {
       if (vaultShadow) {
         scene.remove(vaultShadow);
         disposeObject3D(vaultShadow);
+      }
+      if (skyBackdrop) {
+        scene.remove(skyBackdrop);
+        disposeObject3D(skyBackdrop);
+      }
+      if (backgroundTexture) {
+        backgroundTexture.dispose();
       }
       disposeObject3D(scene);
       if (renderer) {
