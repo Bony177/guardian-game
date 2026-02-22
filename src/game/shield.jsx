@@ -2,6 +2,12 @@ import * as THREE from "three";
 
 const LIGHTNING_OPACITY_SCALE = 0.1;
 const LIGHTNING_SPEED_SCALE = 1.25;
+const SHIELD_GLOW_DEFAULTS = {
+  domeOpacity: 0.25,
+  domeEmissive: 2,
+  lightning: 2,
+  flash: 1,
+};
 
 const glowTexture = (() => {
   if (typeof document === "undefined") return null;
@@ -417,6 +423,7 @@ export function createShield() {
   shield.destroyTimer = 0;
   shield.originalScale = 1;
   shield.shakeIntensity = 0;
+  shield.glow = { ...SHIELD_GLOW_DEFAULTS };
 
   const geometry = new THREE.SphereGeometry(
     radius,
@@ -431,7 +438,7 @@ export function createShield() {
   const coreMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x4f8fff,
     transparent: true,
-    opacity: 0.2,
+    opacity: SHIELD_GLOW_DEFAULTS.domeOpacity,
     emissive: 0x4f9dff,
     emissiveIntensity: 0.95,
     roughness: 0.06,
@@ -469,6 +476,36 @@ export function createShield() {
 
   shield.show = () => (shield.object.visible = true);
   shield.hide = () => (shield.object.visible = false);
+  shield.setGlow = (options = {}) => {
+    if (!options || typeof options !== "object") return;
+
+    const nextDomeOpacity = Number(options.domeOpacity);
+    if (Number.isFinite(nextDomeOpacity)) {
+      shield.glow.domeOpacity = THREE.MathUtils.clamp(nextDomeOpacity, 0, 1);
+      if (!shield.isDestroyed && shield.material) {
+        shield.material.opacity = shield.glow.domeOpacity;
+      }
+    }
+
+    const nextDomeEmissive = Number(options.domeEmissive);
+    if (Number.isFinite(nextDomeEmissive)) {
+      shield.glow.domeEmissive = THREE.MathUtils.clamp(nextDomeEmissive, 0, 8);
+      shield.baseEmissive = 0.9 * shield.glow.domeEmissive;
+      if (!shield.hitFlashTimer && shield.material) {
+        shield.material.emissiveIntensity = shield.baseEmissive;
+      }
+    }
+
+    const nextLightning = Number(options.lightning);
+    if (Number.isFinite(nextLightning)) {
+      shield.glow.lightning = THREE.MathUtils.clamp(nextLightning, 0, 6);
+    }
+
+    const nextFlash = Number(options.flash);
+    if (Number.isFinite(nextFlash)) {
+      shield.glow.flash = THREE.MathUtils.clamp(nextFlash, 0, 6);
+    }
+  };
 
   shield.takeDamage = (amount) => {
     if (shield.isDestroyed) return;
@@ -485,7 +522,7 @@ export function createShield() {
   shield.flash = () => {
     if (!shield.material) return;
     shield.material.emissive.set(0xff0000);
-    shield.material.emissiveIntensity = 3.0;
+    shield.material.emissiveIntensity = 3.0 * shield.glow.flash;
 
     if (shield.bolts?.length) {
       for (let i = 0; i < 5; i += 1) {
@@ -511,21 +548,33 @@ export function createShield() {
             const decay = Math.max(0, lifeRatio);
             if (haloMaterial) {
               haloMaterial.opacity =
-                decay * bolt.userData.haloPeak * (0.95 + flicker * 0.42);
+                decay *
+                bolt.userData.haloPeak *
+                (0.95 + flicker * 0.42) *
+                shield.glow.lightning;
             }
             if (coreMaterial) {
               coreMaterial.opacity =
-                decay * bolt.userData.corePeak * (0.92 + flicker * 0.5);
+                decay *
+                bolt.userData.corePeak *
+                (0.92 + flicker * 0.5) *
+                shield.glow.lightning;
             }
             if (Array.isArray(bolt.userData.branchData)) {
               for (const branch of bolt.userData.branchData) {
                 if (branch.haloMaterial) {
                   branch.haloMaterial.opacity =
-                    decay * branch.haloPeak * (0.86 + flicker * 0.36);
+                    decay *
+                    branch.haloPeak *
+                    (0.86 + flicker * 0.36) *
+                    shield.glow.lightning;
                 }
                 if (branch.coreMaterial) {
                   branch.coreMaterial.opacity =
-                    decay * branch.corePeak * (0.88 + flicker * 0.42);
+                    decay *
+                    branch.corePeak *
+                    (0.88 + flicker * 0.42) *
+                    shield.glow.lightning;
                 }
               }
             }
@@ -533,7 +582,10 @@ export function createShield() {
               for (const glow of bolt.userData.glowData) {
                 if (glow.material) {
                   glow.material.opacity =
-                    decay * glow.peak * (0.9 + flicker * 0.48);
+                    decay *
+                    glow.peak *
+                    (0.9 + flicker * 0.48) *
+                    shield.glow.lightning;
                 }
               }
             }
@@ -559,12 +611,17 @@ export function createShield() {
                 THREE.MathUtils.randFloat(0.18, 0.38) * LIGHTNING_SPEED_SCALE;
               const haloMat = bolt.userData.haloMaterial;
               const coreMat = bolt.userData.coreMaterial;
-              if (haloMat) haloMat.opacity = prevHaloPeak * remainRatio;
-              if (coreMat) coreMat.opacity = prevCorePeak * remainRatio;
+              if (haloMat)
+                haloMat.opacity =
+                  prevHaloPeak * remainRatio * shield.glow.lightning;
+              if (coreMat)
+                coreMat.opacity =
+                  prevCorePeak * remainRatio * shield.glow.lightning;
               if (Array.isArray(bolt.userData.glowData)) {
                 for (const glow of bolt.userData.glowData) {
                   if (glow.material)
-                    glow.material.opacity = glow.peak * remainRatio;
+                    glow.material.opacity =
+                      glow.peak * remainRatio * shield.glow.lightning;
                 }
               }
             }
@@ -596,6 +653,11 @@ export function createShield() {
           shield.baseEmissive,
           0.14,
         );
+        shield.material.opacity = THREE.MathUtils.lerp(
+          shield.material.opacity,
+          shield.glow.domeOpacity,
+          0.2,
+        );
       }
       return;
     }
@@ -614,7 +676,11 @@ export function createShield() {
       const scale = THREE.MathUtils.lerp(1, 0.05, progress);
       shield.object.scale.set(scale, scale, scale);
 
-      shield.material.opacity = THREE.MathUtils.lerp(0.2, 0, progress);
+      shield.material.opacity = THREE.MathUtils.lerp(
+        shield.glow.domeOpacity,
+        0,
+        progress,
+      );
 
       if (shield.bolts?.length) {
         const boltFade = THREE.MathUtils.lerp(1, 0, progress);

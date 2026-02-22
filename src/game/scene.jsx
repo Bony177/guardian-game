@@ -462,6 +462,50 @@ function Scene() {
     }
     scene.add(shield.object);
 
+    const shieldGlowControls = {
+      domeOpacity: shield.glow?.domeOpacity ?? 5,
+      domeEmissive: shield.glow?.domeEmissive ?? 1,
+      lightning: shield.glow?.lightning ?? 1,
+      flash: shield.glow?.flash ?? 1,
+      setDomeOpacity(value) {
+        const nextValue = Number(value);
+        if (!Number.isFinite(nextValue) || !shield.setGlow) return;
+        shield.setGlow({ domeOpacity: nextValue });
+        this.domeOpacity = shield.glow.domeOpacity;
+      },
+      setDomeEmissive(value) {
+        const nextValue = Number(value);
+        if (!Number.isFinite(nextValue) || !shield.setGlow) return;
+        shield.setGlow({ domeEmissive: nextValue });
+        this.domeEmissive = shield.glow.domeEmissive;
+      },
+      setLightning(value) {
+        const nextValue = Number(value);
+        if (!Number.isFinite(nextValue) || !shield.setGlow) return;
+        shield.setGlow({ lightning: nextValue });
+        this.lightning = shield.glow.lightning;
+      },
+      setFlash(value) {
+        const nextValue = Number(value);
+        if (!Number.isFinite(nextValue) || !shield.setGlow) return;
+        shield.setGlow({ flash: nextValue });
+        this.flash = shield.glow.flash;
+      },
+      setAll({ domeOpacity, domeEmissive, lightning, flash } = {}) {
+        if (!shield.setGlow) return;
+        shield.setGlow({ domeOpacity, domeEmissive, lightning, flash });
+        this.domeOpacity = shield.glow.domeOpacity;
+        this.domeEmissive = shield.glow.domeEmissive;
+        this.lightning = shield.glow.lightning;
+        this.flash = shield.glow.flash;
+      },
+    };
+    window.__SHIELD_GLOW = shieldGlowControls;
+    console.log("✅ SHIELD_GLOW exposed to window.__SHIELD_GLOW");
+    console.log(
+      "   Edit via: window.__SHIELD_GLOW.setLightning(2), window.__SHIELD_GLOW.setDomeOpacity(0.32)",
+    );
+
     function createShieldRingGeometry(innerRadius, outerRadius) {
       return new THREE.RingGeometry(
         Math.max(innerRadius, 0.01),
@@ -1411,6 +1455,9 @@ function Scene() {
 
       if (window.__SHIELD_RING) {
         delete window.__SHIELD_RING;
+      }
+      if (window.__SHIELD_GLOW) {
+        delete window.__SHIELD_GLOW;
       }
       if (window.__BARREL_EXP) {
         delete window.__BARREL_EXP;

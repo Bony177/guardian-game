@@ -536,6 +536,16 @@ body {
   text-shadow: 0 0 11px var(--hud-orange-soft);
 }
 
+.film-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  opacity: 1;   /* IMPORTANT — keep very low */
+  mix-blend-mode: overlay;
+}
 @media (max-width: 900px) {
   .top-hud {
     gap: 0;
@@ -564,4 +574,8 @@ body {
     gap: 8px;
     font-size: 9px;
   }
+}
+
+#game-container {
+  filter: brightness(80%) contrast(100%) saturate(100%);
 }
