@@ -472,6 +472,24 @@ function Scene() {
       );
     }
 
+    function updateShieldRingVisualState() {
+      if (!shieldRing || !shieldRing.material || !shieldRing.userData?.controls) {
+        return;
+      }
+      const baseOpacity = shieldRing.userData.controls.opacity;
+      if (!shield.isDestroyed) {
+        shieldRing.visible = true;
+        shieldRing.material.opacity = baseOpacity;
+        return;
+      }
+
+      const fadeDuration = 1.3;
+      const life = THREE.MathUtils.clamp(1 - shield.destroyTimer / fadeDuration, 0, 1);
+      const nextOpacity = baseOpacity * life;
+      shieldRing.material.opacity = nextOpacity;
+      shieldRing.visible = nextOpacity > 0.001;
+    }
+
     function setShieldRingInnerRadius(value) {
       if (!shieldRing || !shieldRing.userData?.controls) return;
       const controls = shieldRing.userData.controls;
@@ -520,7 +538,7 @@ function Scene() {
       if (!shieldRing || !shieldRing.material) return;
       const nextOpacity = THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
       shieldRing.userData.controls.opacity = nextOpacity;
-      shieldRing.material.opacity = nextOpacity;
+      updateShieldRingVisualState();
       shieldRing.material.needsUpdate = true;
     }
 
@@ -1148,6 +1166,7 @@ function Scene() {
 
       shield.update(deltaSeconds);
       updateShieldRingPosition();
+      updateShieldRingVisualState();
       chimneySmokes.forEach((smokeFx) => smokeFx.update());
 
       updateRadarUI();
