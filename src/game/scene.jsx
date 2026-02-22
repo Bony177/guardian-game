@@ -1024,8 +1024,8 @@ function Scene() {
         barrelExpSprites = barrelExpControls.positions.map(() => {
           const sprite = new THREE.Sprite(expMaterial);
           sprite.visible = false;
-          sprite.renderOrder = RENDER_LAYER.FX;
-          sprite.layers.set(RENDER_LAYER.FX);
+          sprite.renderOrder = RENDER_LAYER.GUN - 1;
+          sprite.layers.set(RENDER_LAYER.GUN);
           return sprite;
         });
         applyBarrelExpTransforms();
