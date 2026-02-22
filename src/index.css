@@ -236,3 +236,147 @@ body {
   background: #00eaff;
   box-shadow: 0 0 6px #00eaff;
 }
+
+/* ===== TOP HUD ===== */
+
+.top-hud {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 40px; /* reduced from 60 */
+  box-sizing: border-box;
+  font-family: 'Orbitron', sans-serif;
+  color: #00f0ff;
+  pointer-events: none;
+}
+
+/* ===== VAULT HEALTH ===== */
+
+.vault-health {
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.vault-bar {
+  width: 180px;
+  height: 8px;
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid #00f0ff;
+  margin-top: 5px;
+  position: relative;
+  opacity: 50%;
+}
+
+.vault-fill {
+  height: 100%;
+  width: 78%;
+  background: linear-gradient(90deg, #00f0ff, #00aaff);
+  box-shadow: 0 0 10px #00f0ff;
+}
+
+#vaultHealthValue {
+  margin-left: 10px;
+  font-size: 13px;
+}
+
+/* ===== SECTOR TITLE ===== */
+
+.sector-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 0 15px #00f0ff;
+}
+
+/* ===== SCORE ===== */
+
+.score-panel {
+  font-size: 14px;
+  text-align: right;
+}
+
+#scoreValue {
+  display: block;
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffd54a;
+  text-shadow: 0 0 15px #ffaa00;
+}
+/* ===== CONTROL PANEL WIDTHS ===== */
+
+.sector-box {
+  width: 620px;   /* ← ADJUST THIS */
+  text-align: center;
+  opacity: 50%;
+}
+
+.score-box {
+  width: 200px;   /* ← ADJUST THIS */
+  text-align: right;
+  opacity: 50%;
+}
+
+
+
+
+/* ===== SCI-FI FRAME BASE ===== */
+
+.hud-box {
+  position: relative;
+  padding: 8px 24px;
+  background: rgba(0, 20, 40, 0.7);
+  color: #00f0ff;
+  font-family: 'Orbitron', sans-serif;
+  text-transform: uppercase;
+  clip-path: none;
+  border: 0.2px solid rgba(0, 255, 255, 0.4);
+  box-shadow:
+    0 0 0px rgba(0, 255, 255, 0.3),
+    inset 0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+/* ===== Glowing Edge Lines ===== */
+
+.hud-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(0, 255, 255, 0.6);
+  clip-path: inherit;
+  pointer-events: none;
+}
+
+/* ===== SECTOR TITLE STYLE ===== */
+
+.sector-box {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 0 15px #00f0ff;;
+}
+
+/* ===== SCORE STYLE ===== */
+
+.score-box {
+  color: #ffaa00;
+  box-shadow:
+    0 0 15px rgba(255, 170, 0, 0.4),
+    inset 0 0 15px rgba(255, 170, 0, 0.1);
+}
+
+.score-box::before {
+  border-color: rgba(255, 170, 0, 0.7);
+}
+
+#scoreValue {
+  display: block;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 0 15px #ffaa00;
+}
