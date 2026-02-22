@@ -1,5 +1,8 @@
 import * as THREE from "three";
 
+const LIGHTNING_OPACITY_SCALE = 0.1;
+const LIGHTNING_SPEED_SCALE = 1.25;
+
 const glowTexture = (() => {
   if (typeof document === "undefined") return null;
   const size = 128;
@@ -70,7 +73,8 @@ function fractalSubdivideOnDome(points, radius, iterations, roughness) {
       const mid = new THREE.Vector3().addVectors(p0, p1).normalize();
       const tangent = randomTangentVector(mid);
       const chord = p0.distanceTo(p1);
-      const displacement = chord * currentRoughness * THREE.MathUtils.randFloat(0.8, 1.6);
+      const displacement =
+        chord * currentRoughness * THREE.MathUtils.randFloat(0.8, 1.6);
       mid.addScaledVector(tangent, displacement).normalize();
       next.push(mid, p1.clone());
     }
@@ -134,7 +138,10 @@ function createBoltGeometry(radius) {
     const mix = THREE.MathUtils.randFloat(0.2, 0.5);
     const branchDir = forward.lerp(tangent, mix).normalize();
     const branchLength = THREE.MathUtils.randFloat(0.18, 0.35);
-    const end = start.clone().addScaledVector(branchDir, branchLength).normalize();
+    const end = start
+      .clone()
+      .addScaledVector(branchDir, branchLength)
+      .normalize();
     const branchPoints = fractalSubdivideOnDome(
       [start, end],
       radius,
@@ -144,8 +151,11 @@ function createBoltGeometry(radius) {
 
     const branchCurve = createSegmentedPath(branchPoints);
     const branchSegments = Math.max(14, (branchPoints.length - 1) * 3);
-    const branchThickness = baseThickness * THREE.MathUtils.randFloat(0.45, 0.75);
-    glowAnchors.push(branchPoints[Math.floor(branchPoints.length * 0.45)].clone());
+    const branchThickness =
+      baseThickness * THREE.MathUtils.randFloat(0.45, 0.75);
+    glowAnchors.push(
+      branchPoints[Math.floor(branchPoints.length * 0.45)].clone(),
+    );
 
     branchGeometries.push({
       haloGeometry: new THREE.TubeGeometry(
@@ -213,7 +223,8 @@ function clearBranchesAndGlows(bolt) {
 }
 
 function createBoltLine(radius) {
-  const { haloGeometry, coreGeometry, branchGeometries, glowAnchors } = createBoltGeometry(radius);
+  const { haloGeometry, coreGeometry, branchGeometries, glowAnchors } =
+    createBoltGeometry(radius);
   const haloMaterial = new THREE.MeshBasicMaterial({
     color: new THREE.Color(0x71c7ff),
     transparent: true,
@@ -251,21 +262,29 @@ function createBoltLine(radius) {
 
   bolt.userData.life = 0;
   bolt.userData.maxLife = 0;
-  bolt.userData.cooldown = THREE.MathUtils.randFloat(0.35, 0.9);
+  bolt.userData.cooldown =
+    THREE.MathUtils.randFloat(0.35, 0.9) * LIGHTNING_SPEED_SCALE;
   bolt.userData.halo = halo;
   bolt.userData.core = core;
   bolt.userData.haloMaterial = haloMaterial;
   bolt.userData.coreMaterial = coreMaterial;
-  bolt.userData.haloPeak = 0.2;
-  bolt.userData.corePeak = 0.45;
+  bolt.userData.haloPeak = 0.2 * LIGHTNING_OPACITY_SCALE;
+  bolt.userData.corePeak = 0.45 * LIGHTNING_OPACITY_SCALE;
   bolt.userData.jitterTimer = 0;
-  bolt.userData.nextJitter = THREE.MathUtils.randFloat(0.16, 0.34);
+  bolt.userData.nextJitter =
+    THREE.MathUtils.randFloat(0.16, 0.34) * LIGHTNING_SPEED_SCALE;
 
   for (const branchGeometry of branchGeometries) {
     const branchHaloMaterial = haloMaterial.clone();
     const branchCoreMaterial = coreMaterial.clone();
-    const branchHalo = new THREE.Mesh(branchGeometry.haloGeometry, branchHaloMaterial);
-    const branchCore = new THREE.Mesh(branchGeometry.coreGeometry, branchCoreMaterial);
+    const branchHalo = new THREE.Mesh(
+      branchGeometry.haloGeometry,
+      branchHaloMaterial,
+    );
+    const branchCore = new THREE.Mesh(
+      branchGeometry.coreGeometry,
+      branchCoreMaterial,
+    );
     branchHalo.renderOrder = 1;
     branchCore.renderOrder = 1;
     bolt.add(branchHalo);
@@ -274,8 +293,8 @@ function createBoltLine(radius) {
     bolt.userData.branchData.push({
       haloMaterial: branchHaloMaterial,
       coreMaterial: branchCoreMaterial,
-      haloPeak: 0.14,
-      corePeak: 0.28,
+      haloPeak: 0.14 * LIGHTNING_OPACITY_SCALE,
+      corePeak: 0.28 * LIGHTNING_OPACITY_SCALE,
     });
   }
 
@@ -292,7 +311,8 @@ function createBoltLine(radius) {
 }
 
 function respawnBolt(bolt, radius) {
-  const { haloGeometry, coreGeometry, branchGeometries, glowAnchors } = createBoltGeometry(radius);
+  const { haloGeometry, coreGeometry, branchGeometries, glowAnchors } =
+    createBoltGeometry(radius);
   const halo = bolt.userData.halo;
   const core = bolt.userData.core;
   const haloMaterial = bolt.userData.haloMaterial;
@@ -306,12 +326,16 @@ function respawnBolt(bolt, radius) {
   clearBranchesAndGlows(bolt);
 
   bolt.visible = true;
-  bolt.userData.maxLife = THREE.MathUtils.randFloat(0.34, 0.8);
+  bolt.userData.maxLife =
+    THREE.MathUtils.randFloat(0.34, 0.8) * LIGHTNING_SPEED_SCALE;
   bolt.userData.life = bolt.userData.maxLife;
-  bolt.userData.haloPeak = THREE.MathUtils.randFloat(0.12, 0.24);
-  bolt.userData.corePeak = THREE.MathUtils.randFloat(0.3, 0.58);
+  bolt.userData.haloPeak =
+    THREE.MathUtils.randFloat(0.12, 0.24) * LIGHTNING_OPACITY_SCALE;
+  bolt.userData.corePeak =
+    THREE.MathUtils.randFloat(0.3, 0.58) * LIGHTNING_OPACITY_SCALE;
   bolt.userData.jitterTimer = 0;
-  bolt.userData.nextJitter = THREE.MathUtils.randFloat(0.18, 0.38);
+  bolt.userData.nextJitter =
+    THREE.MathUtils.randFloat(0.18, 0.38) * LIGHTNING_SPEED_SCALE;
   if (haloMaterial) haloMaterial.opacity = bolt.userData.haloPeak;
   if (coreMaterial) coreMaterial.opacity = bolt.userData.corePeak;
 
@@ -323,21 +347,33 @@ function respawnBolt(bolt, radius) {
   }
   if (coreMaterial) {
     const coreLight = THREE.MathUtils.randFloat(0.85, 0.96);
-    coreMaterial.color.setHSL(hue, THREE.MathUtils.clamp(sat - 0.26, 0, 1), coreLight);
+    coreMaterial.color.setHSL(
+      hue,
+      THREE.MathUtils.clamp(sat - 0.26, 0, 1),
+      coreLight,
+    );
   }
 
   for (const branchGeometry of branchGeometries) {
     const branchHaloMaterial = haloMaterial ? haloMaterial.clone() : null;
     const branchCoreMaterial = coreMaterial ? coreMaterial.clone() : null;
-    const branchHalo = new THREE.Mesh(branchGeometry.haloGeometry, branchHaloMaterial);
-    const branchCore = new THREE.Mesh(branchGeometry.coreGeometry, branchCoreMaterial);
+    const branchHalo = new THREE.Mesh(
+      branchGeometry.haloGeometry,
+      branchHaloMaterial,
+    );
+    const branchCore = new THREE.Mesh(
+      branchGeometry.coreGeometry,
+      branchCoreMaterial,
+    );
     branchHalo.renderOrder = 1;
     branchCore.renderOrder = 1;
     bolt.add(branchHalo);
     bolt.add(branchCore);
 
-    const haloPeak = bolt.userData.haloPeak * THREE.MathUtils.randFloat(0.22, 0.45);
-    const corePeak = bolt.userData.corePeak * THREE.MathUtils.randFloat(0.24, 0.5);
+    const haloPeak =
+      bolt.userData.haloPeak * THREE.MathUtils.randFloat(0.22, 0.45);
+    const corePeak =
+      bolt.userData.corePeak * THREE.MathUtils.randFloat(0.24, 0.5);
     if (branchHaloMaterial) branchHaloMaterial.opacity = haloPeak;
     if (branchCoreMaterial) branchCoreMaterial.opacity = corePeak;
 
@@ -353,8 +389,10 @@ function respawnBolt(bolt, radius) {
   for (const anchor of glowAnchors) {
     const glow = createSurfaceGlow(anchor, radius);
     const glowMaterial = glow.material;
-    const glowPeak = bolt.userData.corePeak * THREE.MathUtils.randFloat(0.35, 0.65);
-    if (haloMaterial && glowMaterial) glowMaterial.color.copy(haloMaterial.color).offsetHSL(0, 0, 0.1);
+    const glowPeak =
+      bolt.userData.corePeak * THREE.MathUtils.randFloat(0.35, 0.65);
+    if (haloMaterial && glowMaterial)
+      glowMaterial.color.copy(haloMaterial.color).offsetHSL(0, 0, 0.1);
     if (glowMaterial) glowMaterial.opacity = glowPeak;
     bolt.add(glow);
     bolt.userData.glowSprites.push(glow);
@@ -451,7 +489,8 @@ export function createShield() {
 
     if (shield.bolts?.length) {
       for (let i = 0; i < 5; i += 1) {
-        const bolt = shield.bolts[Math.floor(Math.random() * shield.bolts.length)];
+        const bolt =
+          shield.bolts[Math.floor(Math.random() * shield.bolts.length)];
         if (bolt) respawnBolt(bolt, shield.radius);
       }
     }
@@ -471,10 +510,12 @@ export function createShield() {
             const coreMaterial = bolt.userData.coreMaterial;
             const decay = Math.max(0, lifeRatio);
             if (haloMaterial) {
-              haloMaterial.opacity = decay * bolt.userData.haloPeak * (0.95 + flicker * 0.42);
+              haloMaterial.opacity =
+                decay * bolt.userData.haloPeak * (0.95 + flicker * 0.42);
             }
             if (coreMaterial) {
-              coreMaterial.opacity = decay * bolt.userData.corePeak * (0.92 + flicker * 0.5);
+              coreMaterial.opacity =
+                decay * bolt.userData.corePeak * (0.92 + flicker * 0.5);
             }
             if (Array.isArray(bolt.userData.branchData)) {
               for (const branch of bolt.userData.branchData) {
@@ -491,7 +532,8 @@ export function createShield() {
             if (Array.isArray(bolt.userData.glowData)) {
               for (const glow of bolt.userData.glowData) {
                 if (glow.material) {
-                  glow.material.opacity = decay * glow.peak * (0.9 + flicker * 0.48);
+                  glow.material.opacity =
+                    decay * glow.peak * (0.9 + flicker * 0.48);
                 }
               }
             }
@@ -513,28 +555,33 @@ export function createShield() {
               bolt.userData.haloPeak = prevHaloPeak;
               bolt.userData.corePeak = prevCorePeak;
               bolt.userData.jitterTimer = 0;
-              bolt.userData.nextJitter = THREE.MathUtils.randFloat(0.18, 0.38);
+              bolt.userData.nextJitter =
+                THREE.MathUtils.randFloat(0.18, 0.38) * LIGHTNING_SPEED_SCALE;
               const haloMat = bolt.userData.haloMaterial;
               const coreMat = bolt.userData.coreMaterial;
               if (haloMat) haloMat.opacity = prevHaloPeak * remainRatio;
               if (coreMat) coreMat.opacity = prevCorePeak * remainRatio;
               if (Array.isArray(bolt.userData.glowData)) {
                 for (const glow of bolt.userData.glowData) {
-                  if (glow.material) glow.material.opacity = glow.peak * remainRatio;
+                  if (glow.material)
+                    glow.material.opacity = glow.peak * remainRatio;
                 }
               }
             }
 
             if (bolt.userData.life <= 0) {
               bolt.visible = false;
-              bolt.userData.cooldown = THREE.MathUtils.randFloat(0.3, 0.9);
+              bolt.userData.cooldown =
+                THREE.MathUtils.randFloat(0.3, 0.9) * LIGHTNING_SPEED_SCALE;
             }
           } else {
             bolt.userData.cooldown -= deltaSeconds;
             if (bolt.userData.cooldown <= 0) {
               const shouldSpawn = Math.random() < 0.2;
               if (shouldSpawn) respawnBolt(bolt, shield.radius);
-              else bolt.userData.cooldown = THREE.MathUtils.randFloat(0.24, 0.7);
+              else
+                bolt.userData.cooldown =
+                  THREE.MathUtils.randFloat(0.24, 0.7) * LIGHTNING_SPEED_SCALE;
             }
           }
         }
@@ -602,7 +649,10 @@ export function createShield() {
           }
           if (Array.isArray(bolt.userData.glowData)) {
             for (const glow of bolt.userData.glowData) {
-              finalOpacity = Math.max(finalOpacity, glow.material?.opacity ?? 0);
+              finalOpacity = Math.max(
+                finalOpacity,
+                glow.material?.opacity ?? 0,
+              );
             }
           }
           bolt.visible = finalOpacity > 0.01;
