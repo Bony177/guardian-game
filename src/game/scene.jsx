@@ -187,9 +187,9 @@ console.log("   Edit via: window.__VAULT_SHADOW.offset.y = -0.5 (for example)");
 
 const SHIELD_RING_DEFAULTS = {
   innerRadiusScale: 1,
-  outerRadiusScale: 1.4,
+  outerRadiusScale: 1.9,
   color: 0x2f8fff,
-  opacity: 0.05,
+  opacity: 0.25,
   yOffset: 0.03,
   segments: 128,
 };
@@ -391,6 +391,78 @@ function Scene() {
       );
     }
 
+    function createShieldRingFadeTexture(innerRadius, outerRadius, size = 512) {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return null;
+
+      const imageData = context.createImageData(size, size);
+      const pixels = imageData.data;
+      const center = (size - 1) * 0.5;
+      const maxRadius = Math.max(outerRadius, 0.01);
+      const innerNorm = THREE.MathUtils.clamp(
+        innerRadius / maxRadius,
+        0,
+        0.999,
+      );
+
+      for (let y = 0; y < size; y += 1) {
+        const dy = (y - center) / center;
+        for (let x = 0; x < size; x += 1) {
+          const dx = (x - center) / center;
+          const radiusNorm = Math.sqrt(dx * dx + dy * dy);
+
+          const pixelIndex = (y * size + x) * 4;
+          const fade =
+            radiusNorm <= innerNorm
+              ? 1
+              : THREE.MathUtils.clamp(
+                  1 - (radiusNorm - innerNorm) / Math.max(1 - innerNorm, 0.001),
+                  0,
+                  1,
+                );
+          const maskValue = Math.round(fade * 255);
+
+          pixels[pixelIndex] = maskValue;
+          pixels[pixelIndex + 1] = maskValue;
+          pixels[pixelIndex + 2] = maskValue;
+          pixels[pixelIndex + 3] = 255;
+        }
+      }
+
+      context.putImageData(imageData, 0, 0);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.needsUpdate = true;
+      return texture;
+    }
+
+    function updateShieldRingFadeTexture() {
+      if (
+        !shieldRing ||
+        !shieldRing.material ||
+        !shieldRing.userData?.controls
+      ) {
+        return;
+      }
+      const controls = shieldRing.userData.controls;
+      const nextAlphaMap = createShieldRingFadeTexture(
+        controls.innerRadius,
+        controls.outerRadius,
+      );
+      if (!nextAlphaMap) return;
+
+      const oldAlphaMap = shieldRing.material.alphaMap;
+      shieldRing.material.alphaMap = nextAlphaMap;
+      shieldRing.material.needsUpdate = true;
+      if (oldAlphaMap) oldAlphaMap.dispose();
+    }
+
     function updateShieldRingPosition() {
       if (!shieldRing || !shield?.object) return;
       shieldRing.position.set(
@@ -413,6 +485,7 @@ function Scene() {
         controls.outerRadius,
       );
       oldGeometry.dispose();
+      updateShieldRingFadeTexture();
     }
 
     function setShieldRingOuterRadius(value) {
@@ -431,6 +504,7 @@ function Scene() {
         controls.outerRadius,
       );
       oldGeometry.dispose();
+      updateShieldRingFadeTexture();
     }
 
     function setShieldRingColor(hex) {
@@ -482,6 +556,7 @@ function Scene() {
     shieldRing.renderOrder = RENDER_LAYER.BUILDINGS;
     shieldRing.layers.set(RENDER_LAYER.BUILDINGS);
     shieldRing.userData.controls = shieldRingControls;
+    updateShieldRingFadeTexture();
     updateShieldRingPosition();
     scene.add(shieldRing);
 
