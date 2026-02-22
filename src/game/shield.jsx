@@ -1,5 +1,35 @@
 import * as THREE from "three";
 
+const glowTexture = (() => {
+  if (typeof document === "undefined") return null;
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const gradient = ctx.createRadialGradient(
+    size * 0.5,
+    size * 0.5,
+    0,
+    size * 0.5,
+    size * 0.5,
+    size * 0.5,
+  );
+  gradient.addColorStop(0, "rgba(255,255,255,1)");
+  gradient.addColorStop(0.3, "rgba(180,235,255,0.92)");
+  gradient.addColorStop(0.65, "rgba(92,182,255,0.35)");
+  gradient.addColorStop(1, "rgba(25,78,138,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+})();
+
 function randomDomePoint(radius) {
   const theta = THREE.MathUtils.randFloat(0.08, Math.PI / 2);
   const phi = THREE.MathUtils.randFloat(0, Math.PI * 2);
@@ -72,6 +102,7 @@ function createBoltGeometry(radius) {
   const curve = createSegmentedPath(points);
   const tubularSegments = Math.max(28, (points.length - 1) * 3);
   const baseThickness = THREE.MathUtils.randFloat(0.04, 0.09);
+  const glowAnchors = [points[Math.floor(points.length * 0.5)].clone()];
 
   const haloGeometry = new THREE.TubeGeometry(
     curve,
@@ -114,6 +145,7 @@ function createBoltGeometry(radius) {
     const branchCurve = createSegmentedPath(branchPoints);
     const branchSegments = Math.max(14, (branchPoints.length - 1) * 3);
     const branchThickness = baseThickness * THREE.MathUtils.randFloat(0.45, 0.75);
+    glowAnchors.push(branchPoints[Math.floor(branchPoints.length * 0.45)].clone());
 
     branchGeometries.push({
       haloGeometry: new THREE.TubeGeometry(
@@ -133,11 +165,55 @@ function createBoltGeometry(radius) {
     });
   }
 
-  return { haloGeometry, coreGeometry, branchGeometries };
+  return { haloGeometry, coreGeometry, branchGeometries, glowAnchors };
+}
+
+function createSurfaceGlow(anchor, radius) {
+  const material = new THREE.SpriteMaterial({
+    map: glowTexture,
+    color: new THREE.Color(0x83d4ff),
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  const glow = new THREE.Sprite(material);
+  const position = clampToDome(anchor.clone(), radius, 1.008);
+  glow.position.copy(position);
+  const size = THREE.MathUtils.randFloat(1.25, 2.3);
+  glow.scale.set(size, size, 1);
+  glow.renderOrder = 1;
+  return glow;
+}
+
+function clearBranchesAndGlows(bolt) {
+  if (Array.isArray(bolt.userData.branchMeshes)) {
+    for (const branch of bolt.userData.branchMeshes) {
+      if (branch?.halo?.geometry) branch.halo.geometry.dispose();
+      if (branch?.core?.geometry) branch.core.geometry.dispose();
+      if (branch?.halo?.material) branch.halo.material.dispose();
+      if (branch?.core?.material) branch.core.material.dispose();
+      if (branch?.halo?.parent) branch.halo.parent.remove(branch.halo);
+      if (branch?.core?.parent) branch.core.parent.remove(branch.core);
+    }
+  }
+  bolt.userData.branchMeshes = [];
+  bolt.userData.branchData = [];
+
+  if (Array.isArray(bolt.userData.glowSprites)) {
+    for (const glow of bolt.userData.glowSprites) {
+      if (glow?.material) glow.material.dispose();
+      if (glow?.parent) glow.parent.remove(glow);
+    }
+  }
+  bolt.userData.glowSprites = [];
+  bolt.userData.glowData = [];
 }
 
 function createBoltLine(radius) {
-  const { haloGeometry, coreGeometry, branchGeometries } = createBoltGeometry(radius);
+  const { haloGeometry, coreGeometry, branchGeometries, glowAnchors } = createBoltGeometry(radius);
   const haloMaterial = new THREE.MeshBasicMaterial({
     color: new THREE.Color(0x71c7ff),
     transparent: true,
@@ -170,6 +246,8 @@ function createBoltLine(radius) {
   bolt.add(core);
   bolt.userData.branchMeshes = [];
   bolt.userData.branchData = [];
+  bolt.userData.glowSprites = [];
+  bolt.userData.glowData = [];
 
   bolt.userData.life = 0;
   bolt.userData.maxLife = 0;
@@ -200,11 +278,21 @@ function createBoltLine(radius) {
       corePeak: 0.28,
     });
   }
+
+  for (const anchor of glowAnchors) {
+    const glow = createSurfaceGlow(anchor, radius);
+    bolt.add(glow);
+    bolt.userData.glowSprites.push(glow);
+    bolt.userData.glowData.push({
+      material: glow.material,
+      peak: 0.22,
+    });
+  }
   return bolt;
 }
 
 function respawnBolt(bolt, radius) {
-  const { haloGeometry, coreGeometry, branchGeometries } = createBoltGeometry(radius);
+  const { haloGeometry, coreGeometry, branchGeometries, glowAnchors } = createBoltGeometry(radius);
   const halo = bolt.userData.halo;
   const core = bolt.userData.core;
   const haloMaterial = bolt.userData.haloMaterial;
@@ -215,18 +303,7 @@ function respawnBolt(bolt, radius) {
   if (halo) halo.geometry = haloGeometry;
   if (core) core.geometry = coreGeometry;
 
-  if (Array.isArray(bolt.userData.branchMeshes)) {
-    for (const branch of bolt.userData.branchMeshes) {
-      if (branch?.halo?.geometry) branch.halo.geometry.dispose();
-      if (branch?.core?.geometry) branch.core.geometry.dispose();
-      if (branch?.halo?.material) branch.halo.material.dispose();
-      if (branch?.core?.material) branch.core.material.dispose();
-      if (branch?.halo?.parent) branch.halo.parent.remove(branch.halo);
-      if (branch?.core?.parent) branch.core.parent.remove(branch.core);
-    }
-  }
-  bolt.userData.branchMeshes = [];
-  bolt.userData.branchData = [];
+  clearBranchesAndGlows(bolt);
 
   bolt.visible = true;
   bolt.userData.maxLife = THREE.MathUtils.randFloat(0.34, 0.8);
@@ -270,6 +347,20 @@ function respawnBolt(bolt, radius) {
       coreMaterial: branchCoreMaterial,
       haloPeak,
       corePeak,
+    });
+  }
+
+  for (const anchor of glowAnchors) {
+    const glow = createSurfaceGlow(anchor, radius);
+    const glowMaterial = glow.material;
+    const glowPeak = bolt.userData.corePeak * THREE.MathUtils.randFloat(0.35, 0.65);
+    if (haloMaterial && glowMaterial) glowMaterial.color.copy(haloMaterial.color).offsetHSL(0, 0, 0.1);
+    if (glowMaterial) glowMaterial.opacity = glowPeak;
+    bolt.add(glow);
+    bolt.userData.glowSprites.push(glow);
+    bolt.userData.glowData.push({
+      material: glowMaterial,
+      peak: glowPeak,
     });
   }
 }
@@ -397,6 +488,13 @@ export function createShield() {
                 }
               }
             }
+            if (Array.isArray(bolt.userData.glowData)) {
+              for (const glow of bolt.userData.glowData) {
+                if (glow.material) {
+                  glow.material.opacity = decay * glow.peak * (0.9 + flicker * 0.48);
+                }
+              }
+            }
 
             bolt.userData.jitterTimer += deltaSeconds;
             if (bolt.userData.jitterTimer >= bolt.userData.nextJitter) {
@@ -420,6 +518,11 @@ export function createShield() {
               const coreMat = bolt.userData.coreMaterial;
               if (haloMat) haloMat.opacity = prevHaloPeak * remainRatio;
               if (coreMat) coreMat.opacity = prevCorePeak * remainRatio;
+              if (Array.isArray(bolt.userData.glowData)) {
+                for (const glow of bolt.userData.glowData) {
+                  if (glow.material) glow.material.opacity = glow.peak * remainRatio;
+                }
+              }
             }
 
             if (bolt.userData.life <= 0) {
@@ -479,6 +582,11 @@ export function createShield() {
               if (branch.coreMaterial) branch.coreMaterial.opacity *= boltFade;
             }
           }
+          if (Array.isArray(bolt.userData.glowData)) {
+            for (const glow of bolt.userData.glowData) {
+              if (glow.material) glow.material.opacity *= boltFade;
+            }
+          }
           let finalOpacity = Math.max(
             haloMaterial?.opacity ?? 0,
             coreMaterial?.opacity ?? 0,
@@ -490,6 +598,11 @@ export function createShield() {
                 branch.haloMaterial?.opacity ?? 0,
                 branch.coreMaterial?.opacity ?? 0,
               );
+            }
+          }
+          if (Array.isArray(bolt.userData.glowData)) {
+            for (const glow of bolt.userData.glowData) {
+              finalOpacity = Math.max(finalOpacity, glow.material?.opacity ?? 0);
             }
           }
           bolt.visible = finalOpacity > 0.01;
