@@ -194,6 +194,14 @@ const SHIELD_RING_DEFAULTS = {
   segments: 128,
 };
 
+const BARREL_EXP_DEFAULTS = {
+  positions: [
+    { x: -0.5, y: 0.16, z: 0.23 },
+    { x: -0.5, y: 0.16, z: -0.23 },
+  ],
+  size: 0.5,
+};
+
 function Scene() {
   const mountRef = useRef(null);
 
@@ -207,7 +215,6 @@ function Scene() {
     let rafId = null;
     let lastRadarCount = -1;
     let lastShieldPercent = -1;
-    const timeoutIds = [];
     const activeExplosions = [];
 
     let scene = null;
@@ -220,10 +227,9 @@ function Scene() {
     let building = null;
     let shieldRing = null;
     let barrelBaseZ = 0;
-    let muzzleFlashLeft = null;
-    let muzzleFlashRight = null;
-    let muzzleVideo = null;
-    let videoTexture = null;
+    let barrelExpSprites = [];
+    let barrelExpMaterial = null;
+    let barrelExpTexture = null;
 
     let mouseX = 0;
     let mouseY = 0;
@@ -243,6 +249,96 @@ function Scene() {
     const shipSessionId = startShipsSession();
     const shieldHealthFill = document.getElementById("shieldHealthFill");
     const shieldHealthValue = document.getElementById("shieldHealthValue");
+    const barrelExpState = {
+      isPlaying: false,
+      elapsed: 0,
+      frame: 0,
+      frameDuration: 1 / 24,
+      totalFrames: 16,
+      columns: 4,
+      rows: 4,
+    };
+    const barrelExpControls = {
+      positions: BARREL_EXP_DEFAULTS.positions.map((position) => ({
+        ...position,
+      })),
+      size: BARREL_EXP_DEFAULTS.size,
+      setPosition(index, x, y, z) {
+        const idx = Number(index);
+        if (!Number.isInteger(idx) || idx < 0 || idx >= this.positions.length) {
+          return;
+        }
+        const target = this.positions[idx];
+        target.x = Number.isFinite(Number(x)) ? Number(x) : target.x;
+        target.y = Number.isFinite(Number(y)) ? Number(y) : target.y;
+        target.z = Number.isFinite(Number(z)) ? Number(z) : target.z;
+        applyBarrelExpTransforms();
+      },
+      setSize(size) {
+        const nextSize = Number(size);
+        if (!Number.isFinite(nextSize) || nextSize <= 0) return;
+        this.size = nextSize;
+        applyBarrelExpTransforms();
+      },
+    };
+
+    function applyBarrelExpTransforms() {
+      if (!barrelExpSprites.length) return;
+      for (let i = 0; i < barrelExpSprites.length; i += 1) {
+        const sprite = barrelExpSprites[i];
+        const position = barrelExpControls.positions[i];
+        if (!sprite || !position) continue;
+        sprite.position.set(position.x, position.y, position.z);
+        sprite.scale.set(barrelExpControls.size, barrelExpControls.size, 1);
+      }
+    }
+
+    function setBarrelExpFrame(frameIndex) {
+      if (!barrelExpTexture) return;
+      const clampedFrame = THREE.MathUtils.clamp(
+        frameIndex,
+        0,
+        barrelExpState.totalFrames - 1,
+      );
+      const column = clampedFrame % barrelExpState.columns;
+      const row = Math.floor(clampedFrame / barrelExpState.columns);
+
+      barrelExpTexture.offset.x = column / barrelExpState.columns;
+      barrelExpTexture.offset.y = 1 - (row + 1) / barrelExpState.rows;
+      barrelExpTexture.needsUpdate = true;
+    }
+
+    function playBarrelExp() {
+      if (!barrelExpSprites.length) return;
+      barrelExpState.isPlaying = true;
+      barrelExpState.elapsed = 0;
+      barrelExpState.frame = 0;
+      setBarrelExpFrame(0);
+      for (const sprite of barrelExpSprites) {
+        sprite.visible = true;
+      }
+    }
+
+    function updateBarrelExp(deltaSeconds) {
+      if (!barrelExpSprites.length || !barrelExpState.isPlaying) return;
+
+      barrelExpState.elapsed += deltaSeconds;
+      const nextFrame = Math.floor(
+        barrelExpState.elapsed / barrelExpState.frameDuration,
+      );
+
+      if (nextFrame !== barrelExpState.frame) {
+        barrelExpState.frame = nextFrame;
+        if (barrelExpState.frame >= barrelExpState.totalFrames) {
+          barrelExpState.isPlaying = false;
+          for (const sprite of barrelExpSprites) {
+            sprite.visible = false;
+          }
+          return;
+        }
+        setBarrelExpFrame(barrelExpState.frame);
+      }
+    }
 
     function registerVaultGlowPulseTargets(material) {
       if (!material) return;
@@ -286,24 +382,7 @@ function Scene() {
         activeExplosions.push(explosion);
       }
 
-      if (muzzleVideo && muzzleFlashLeft && muzzleFlashRight) {
-        muzzleVideo.currentTime = 0;
-        const playPromise = muzzleVideo.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) =>
-            console.error("Video play failed:", error),
-          );
-        }
-
-        muzzleFlashLeft.visible = true;
-        muzzleFlashRight.visible = true;
-
-        const timeoutId = window.setTimeout(() => {
-          if (muzzleFlashLeft) muzzleFlashLeft.visible = false;
-          if (muzzleFlashRight) muzzleFlashRight.visible = false;
-        }, 120);
-        timeoutIds.push(timeoutId);
-      }
+      playBarrelExp();
     };
 
     const onMouseMove = (e) => {
@@ -473,7 +552,11 @@ function Scene() {
     }
 
     function updateShieldRingVisualState() {
-      if (!shieldRing || !shieldRing.material || !shieldRing.userData?.controls) {
+      if (
+        !shieldRing ||
+        !shieldRing.material ||
+        !shieldRing.userData?.controls
+      ) {
         return;
       }
       const baseOpacity = shieldRing.userData.controls.opacity;
@@ -484,7 +567,11 @@ function Scene() {
       }
 
       const fadeDuration = 1.3;
-      const life = THREE.MathUtils.clamp(1 - shield.destroyTimer / fadeDuration, 0, 1);
+      const life = THREE.MathUtils.clamp(
+        1 - shield.destroyTimer / fadeDuration,
+        0,
+        1,
+      );
       const nextOpacity = baseOpacity * life;
       shieldRing.material.opacity = nextOpacity;
       shieldRing.visible = nextOpacity > 0.001;
@@ -912,52 +999,40 @@ function Scene() {
         });
         gunGroup.add(gunBarrel);
 
-        const video = document.createElement("video");
-        video.src = "/textures/muzzle_flash.mp4";
-        video.loop = false;
-        video.muted = true;
-        video.playsInline = true;
-        video.preload = "auto";
-        video.crossOrigin = "anonymous";
-        video.load();
-        muzzleVideo = video;
+        //debug end
 
-        videoTexture = new THREE.VideoTexture(video);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        videoTexture.generateMipmaps = false;
+        const expTexture = new THREE.TextureLoader().load("/textures/EXP.png");
+        expTexture.colorSpace = THREE.SRGBColorSpace;
+        expTexture.wrapS = THREE.ClampToEdgeWrapping;
+        expTexture.wrapT = THREE.ClampToEdgeWrapping;
+        expTexture.repeat.set(
+          1 / barrelExpState.columns,
+          1 / barrelExpState.rows,
+        );
+        expTexture.magFilter = THREE.LinearFilter;
+        expTexture.minFilter = THREE.LinearFilter;
+        barrelExpTexture = expTexture;
 
-        const muzzleMaterial = new THREE.SpriteMaterial({
-          map: videoTexture,
+        const expMaterial = new THREE.SpriteMaterial({
+          map: expTexture,
           transparent: true,
-          blending: THREE.AdditiveBlending,
           depthWrite: false,
+          depthTest: true,
+          blending: THREE.AdditiveBlending,
         });
-
-        muzzleFlashLeft = new THREE.Sprite(muzzleMaterial);
-        muzzleFlashLeft.scale.set(2, 2, 1);
-        muzzleFlashLeft.position.set(-0.3, 0.2, 0.5);
-        muzzleFlashLeft.visible = false;
-        // Draw muzzle sprites above everything else (sprites remain additive/translucent)
-        muzzleFlashLeft.renderOrder = RENDER_LAYER.FX;
-        muzzleFlashLeft.layers.set(RENDER_LAYER.FX);
-        if (muzzleFlashLeft.material) {
-          muzzleFlashLeft.material.depthTest = true;
-          muzzleFlashLeft.material.depthWrite = false;
+        barrelExpMaterial = expMaterial;
+        barrelExpSprites = barrelExpControls.positions.map(() => {
+          const sprite = new THREE.Sprite(expMaterial);
+          sprite.visible = false;
+          sprite.renderOrder = RENDER_LAYER.FX;
+          sprite.layers.set(RENDER_LAYER.FX);
+          return sprite;
+        });
+        applyBarrelExpTransforms();
+        setBarrelExpFrame(0);
+        for (const sprite of barrelExpSprites) {
+          gunBarrel.add(sprite);
         }
-        gunBarrel.add(muzzleFlashLeft);
-
-        muzzleFlashRight = new THREE.Sprite(muzzleMaterial.clone());
-        muzzleFlashRight.scale.set(2, 2, 1);
-        muzzleFlashRight.position.set(0.3, 0.2, 0.5);
-        muzzleFlashRight.visible = false;
-        muzzleFlashRight.renderOrder = RENDER_LAYER.FX;
-        muzzleFlashRight.layers.set(RENDER_LAYER.FX);
-        if (muzzleFlashRight.material) {
-          muzzleFlashRight.material.depthTest = true;
-          muzzleFlashRight.material.depthWrite = false;
-        }
-        gunBarrel.add(muzzleFlashRight);
       },
       undefined,
       (err) => console.error("Gun barrel load error", err),
@@ -1203,13 +1278,13 @@ function Scene() {
         );
       }
 
-      if (videoTexture) videoTexture.needsUpdate = true;
       for (let i = activeExplosions.length - 1; i >= 0; i--) {
         const stillAlive = activeExplosions[i].update(deltaSeconds);
         if (!stillAlive) {
           activeExplosions.splice(i, 1);
         }
       }
+      updateBarrelExp(deltaSeconds);
 
       if (vaultGlowPulseTargets.length > 0) {
         const elapsed = clock.getElapsedTime();
@@ -1260,6 +1335,12 @@ function Scene() {
     }
 
     console.log("Starting animation loop");
+    window.__BARREL_EXP = barrelExpControls;
+    console.log("✅ BARREL_EXP exposed to window.__BARREL_EXP");
+    console.log(
+      "   Edit position: window.__BARREL_EXP.setPosition(0, -0.5, 0.16, 0.23)",
+    );
+    console.log("   Edit size: window.__BARREL_EXP.setSize(2.2)");
     animate();
 
     return () => {
@@ -1270,20 +1351,9 @@ function Scene() {
         window.cancelAnimationFrame(rafId);
       }
 
-      for (const timeoutId of timeoutIds) {
-        window.clearTimeout(timeoutId);
-      }
-
       window.removeEventListener("dblclick", onDoubleClick);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", onResize);
-
-      if (muzzleVideo) {
-        muzzleVideo.pause();
-        muzzleVideo.removeAttribute("src");
-        muzzleVideo.load();
-      }
-      if (videoTexture) videoTexture.dispose();
 
       resetShips();
 
@@ -1308,6 +1378,17 @@ function Scene() {
         if (shieldRing.geometry) shieldRing.geometry.dispose();
         disposeMaterial(shieldRing.material);
       }
+      if (barrelExpSprites.length && gunBarrel) {
+        for (const sprite of barrelExpSprites) {
+          gunBarrel.remove(sprite);
+        }
+      }
+      if (barrelExpMaterial) {
+        disposeMaterial(barrelExpMaterial);
+      }
+      if (barrelExpTexture) {
+        barrelExpTexture.dispose();
+      }
       if (skyBackdrop) {
         scene.remove(skyBackdrop);
         disposeObject3D(skyBackdrop);
@@ -1330,6 +1411,9 @@ function Scene() {
 
       if (window.__SHIELD_RING) {
         delete window.__SHIELD_RING;
+      }
+      if (window.__BARREL_EXP) {
+        delete window.__BARREL_EXP;
       }
     };
   }, []);
