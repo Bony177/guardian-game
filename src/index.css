@@ -241,7 +241,7 @@ body {
 
 .top-hud {
   position: absolute;
-  top: 10px;
+  top: 2px;
   left: 0;
   right: 0;
   display: flex;
@@ -379,4 +379,189 @@ body {
   font-size: 20px;
   font-weight: bold;
   text-shadow: 0 0 15px #ffaa00;
+}
+
+/* ===== TOP HUD OVERRIDE (MATCH REFERENCE) ===== */
+
+.top-hud {
+  --hud-cyan: #65f3ff;
+  --hud-cyan-soft: rgba(101, 243, 255, 0.28);
+  --hud-cyan-line: rgba(101, 243, 255, 0.7);
+  --hud-orange: #ffb641;
+  --hud-orange-soft: rgba(255, 182, 65, 0.3);
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 clamp(10px, 2.5vw, 34px);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.hud-box {
+  position: relative;
+  min-height: 38px;
+  padding: 5px 14px;
+  color: var(--hud-cyan);
+  font-family: 'Orbitron', sans-serif;
+  text-transform: uppercase;
+  background:
+    linear-gradient(180deg, rgba(15, 28, 53, 0.72), rgba(4, 13, 28, 0.9));
+  border: 1px solid rgba(72, 162, 213, 0.5);
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+  box-shadow:
+    inset 0 0 0 1px rgba(24, 116, 167, 0.35),
+    inset 0 0 14px rgba(21, 140, 203, 0.2),
+    0 0 16px rgba(0, 140, 200, 0.15);
+}
+
+.hud-box::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--hud-cyan-line), transparent);
+  opacity: 0.75;
+}
+
+.vault-box {
+  width: clamp(180px, 22vw, 260px);
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 10px 100%, 0 50%);
+  margin-right: -6px;
+}
+
+.vault-health {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  row-gap: 6px;
+  font-size: 0;
+  letter-spacing: 1px;
+  color: #8cecff;
+  text-shadow: 0 0 8px rgba(84, 224, 255, 0.45);
+}
+
+.vault-health::before {
+  content: "POWER";
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.vault-bar {
+  grid-column: 1 / -1;
+  height: 5px;
+  border: 1px solid var(--hud-cyan-soft);
+  background: rgba(8, 56, 79, 0.45);
+  overflow: hidden;
+}
+
+.vault-fill {
+  height: 100%;
+  width: 78%;
+  background: linear-gradient(90deg, #2bf2ff, #28c7ff);
+  box-shadow: 0 0 12px rgba(51, 234, 255, 0.8);
+}
+
+#vaultHealthValue {
+  font-size: 10px;
+  color: #b3f8ff;
+}
+
+.sector-box {
+  flex: 1 1 auto;
+  min-width: 260px;
+  max-width: 700px;
+  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 16px 100%, 0 50%);
+  text-align: center;
+  font-size: clamp(11px, 1.5vw, 22px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #92f6ff;
+  text-shadow: 0 0 12px rgba(46, 224, 255, 0.65);
+  z-index: 2;
+}
+
+.score-box {
+  width: clamp(185px, 20vw, 250px);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 14px 50%);
+  color: var(--hud-orange);
+  border-color: rgba(159, 116, 44, 0.65);
+  padding-right: 30px;
+  margin-left: -6px;
+  box-shadow:
+    inset 0 0 0 1px rgba(162, 117, 44, 0.4),
+    inset 0 0 14px rgba(204, 132, 34, 0.2),
+    0 0 14px rgba(255, 165, 52, 0.16);
+}
+
+.score-box::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 188, 74, 0.75), transparent);
+}
+
+.score-box::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 219, 134, 0.8);
+  background:
+    radial-gradient(circle at 30% 30%, #fff4c8 0%, #ffc24e 45%, #cc7a00 100%);
+  box-shadow: 0 0 10px rgba(255, 177, 64, 0.8);
+}
+
+.score-panel {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 14px;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+#scoreValue {
+  display: inline;
+  font-size: clamp(16px, 1.7vw, 24px);
+  font-weight: 700;
+  color: #ffd581;
+  text-shadow: 0 0 11px var(--hud-orange-soft);
+}
+
+@media (max-width: 900px) {
+  .top-hud {
+    gap: 0;
+    padding: 0 8px;
+    top: 0;
+  }
+
+  .hud-box {
+    min-height: 32px;
+    padding: 4px 8px;
+  }
+
+  .vault-box,
+  .score-box {
+    width: auto;
+    flex: 0 0 30%;
+  }
+
+  .sector-box {
+    min-width: 0;
+    flex: 1 1 40%;
+    letter-spacing: 1px;
+  }
+
+  .score-panel {
+    gap: 8px;
+    font-size: 9px;
+  }
 }
