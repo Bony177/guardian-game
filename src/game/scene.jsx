@@ -185,6 +185,15 @@ window.__VAULT_SHADOW = VAULT_SHADOW;
 console.log("✅ VAULT_SHADOW exposed to window.__VAULT_SHADOW");
 console.log("   Edit via: window.__VAULT_SHADOW.offset.y = -0.5 (for example)");
 
+const SHIELD_RING_DEFAULTS = {
+  innerRadiusScale: 1,
+  outerRadiusScale: 1.4,
+  color: 0x2f8fff,
+  opacity: 0.05,
+  yOffset: 0.03,
+  segments: 128,
+};
+
 function Scene() {
   const mountRef = useRef(null);
 
@@ -209,6 +218,7 @@ function Scene() {
     let terrain = null;
     let gunBarrel = null;
     let building = null;
+    let shieldRing = null;
     let barrelBaseZ = 0;
     let muzzleFlashLeft = null;
     let muzzleFlashRight = null;
@@ -331,7 +341,9 @@ function Scene() {
     renderer.shadowMap.enabled = true;
     mountNode.appendChild(renderer.domElement);
 
-    backgroundTexture = new THREE.TextureLoader().load("/textures/nightsky.jpg");
+    backgroundTexture = new THREE.TextureLoader().load(
+      "/textures/nightsky.jpg",
+    );
     backgroundTexture.colorSpace = THREE.SRGBColorSpace;
 
     const skyGeometry = new THREE.SphereGeometry(700, 64, 32);
@@ -370,6 +382,114 @@ function Scene() {
       shield.material.depthWrite = false;
     }
     scene.add(shield.object);
+
+    function createShieldRingGeometry(innerRadius, outerRadius) {
+      return new THREE.RingGeometry(
+        Math.max(innerRadius, 0.01),
+        Math.max(outerRadius, innerRadius + 0.01),
+        SHIELD_RING_DEFAULTS.segments,
+      );
+    }
+
+    function updateShieldRingPosition() {
+      if (!shieldRing || !shield?.object) return;
+      shieldRing.position.set(
+        shield.object.position.x,
+        terrainGroundY + SHIELD_RING_DEFAULTS.yOffset,
+        shield.object.position.z,
+      );
+    }
+
+    function setShieldRingInnerRadius(value) {
+      if (!shieldRing || !shieldRing.userData?.controls) return;
+      const controls = shieldRing.userData.controls;
+      const nextInner = Math.max(Number(value) || 0, 0.01);
+      if (nextInner >= controls.outerRadius) return;
+
+      controls.innerRadius = nextInner;
+      const oldGeometry = shieldRing.geometry;
+      shieldRing.geometry = createShieldRingGeometry(
+        controls.innerRadius,
+        controls.outerRadius,
+      );
+      oldGeometry.dispose();
+    }
+
+    function setShieldRingOuterRadius(value) {
+      if (!shieldRing || !shieldRing.userData?.controls) return;
+      const controls = shieldRing.userData.controls;
+      const nextOuter = Math.max(
+        Number(value) || 0,
+        controls.innerRadius + 0.01,
+      );
+      if (nextOuter <= controls.innerRadius) return;
+
+      controls.outerRadius = nextOuter;
+      const oldGeometry = shieldRing.geometry;
+      shieldRing.geometry = createShieldRingGeometry(
+        controls.innerRadius,
+        controls.outerRadius,
+      );
+      oldGeometry.dispose();
+    }
+
+    function setShieldRingColor(hex) {
+      if (!shieldRing || !shieldRing.material) return;
+      const parsed = Number(hex);
+      if (!Number.isFinite(parsed)) return;
+      shieldRing.userData.controls.color = parsed;
+      shieldRing.material.color.set(parsed);
+      shieldRing.material.needsUpdate = true;
+    }
+
+    function setShieldRingOpacity(value) {
+      if (!shieldRing || !shieldRing.material) return;
+      const nextOpacity = THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
+      shieldRing.userData.controls.opacity = nextOpacity;
+      shieldRing.material.opacity = nextOpacity;
+      shieldRing.material.needsUpdate = true;
+    }
+
+    const shieldRingInnerRadius =
+      shield.radius * SHIELD_RING_DEFAULTS.innerRadiusScale;
+    const shieldRingOuterRadius =
+      shield.radius * SHIELD_RING_DEFAULTS.outerRadiusScale;
+    const shieldRingControls = {
+      innerRadius: shieldRingInnerRadius,
+      outerRadius: shieldRingOuterRadius,
+      color: SHIELD_RING_DEFAULTS.color,
+      opacity: SHIELD_RING_DEFAULTS.opacity,
+      setInnerRadius: setShieldRingInnerRadius,
+      setOuterRadius: setShieldRingOuterRadius,
+      setColor: setShieldRingColor,
+      setOpacity: setShieldRingOpacity,
+    };
+
+    const shieldRingMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(SHIELD_RING_DEFAULTS.color),
+      transparent: true,
+      opacity: SHIELD_RING_DEFAULTS.opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: true,
+      side: THREE.DoubleSide,
+    });
+    shieldRing = new THREE.Mesh(
+      createShieldRingGeometry(shieldRingInnerRadius, shieldRingOuterRadius),
+      shieldRingMaterial,
+    );
+    shieldRing.rotation.x = -Math.PI / 2;
+    shieldRing.renderOrder = RENDER_LAYER.BUILDINGS;
+    shieldRing.layers.set(RENDER_LAYER.BUILDINGS);
+    shieldRing.userData.controls = shieldRingControls;
+    updateShieldRingPosition();
+    scene.add(shieldRing);
+
+    window.__SHIELD_RING = shieldRingControls;
+    console.log("✅ SHIELD_RING exposed to window.__SHIELD_RING");
+    console.log(
+      "   Edit via: window.__SHIELD_RING.setOuterRadius(12), window.__SHIELD_RING.setOpacity(0.5)",
+    );
 
     const chimneySmokeConfigs = [
       { position: new THREE.Vector3(3, 0, 0), opacity: 0.05, speed: 1 },
@@ -952,6 +1072,7 @@ function Scene() {
       }
 
       shield.update(deltaSeconds);
+      updateShieldRingPosition();
       chimneySmokes.forEach((smokeFx) => smokeFx.update());
 
       updateRadarUI();
@@ -1088,6 +1209,11 @@ function Scene() {
         scene.remove(vaultShadow);
         disposeObject3D(vaultShadow);
       }
+      if (shieldRing) {
+        scene.remove(shieldRing);
+        if (shieldRing.geometry) shieldRing.geometry.dispose();
+        disposeMaterial(shieldRing.material);
+      }
       if (skyBackdrop) {
         scene.remove(skyBackdrop);
         disposeObject3D(skyBackdrop);
@@ -1106,6 +1232,10 @@ function Scene() {
         if (mountNode.contains(renderer.domElement)) {
           mountNode.removeChild(renderer.domElement);
         }
+      }
+
+      if (window.__SHIELD_RING) {
+        delete window.__SHIELD_RING;
       }
     };
   }, []);
