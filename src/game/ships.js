@@ -87,6 +87,7 @@ let shipIdCounter = 0;
 const activeShips = [];
 
 const shipsDestroyedByType = { 1: 0, 2: 0, 3: 0 };
+let shipDestroyedCallback = null;
 
 
 
@@ -164,6 +165,10 @@ export function resetShips() {
   activeShips.length = 0;
   inFlightLoads = 0;
   spawnTimer = 0;
+}
+
+export function setShipDestroyedCallback(callback) {
+  shipDestroyedCallback = typeof callback === "function" ? callback : null;
 }
 
 function getCameraBasis(camera) {
@@ -301,6 +306,7 @@ export function spawnShip(scene, camera, sessionId = currentSessionId) {
       0,
       THREE.MathUtils.randFloat(-0.01, 0.01),
     ),
+    scoreAwarded: false,
   };
 
   activeShips.push(placeholder);
@@ -519,6 +525,11 @@ export function damageShip(hitObject) {
   ship.healthBar.scale.x = ship.health / ship.maxHealth;
 
   if (ship.health <= 0) {
+    if (!ship.scoreAwarded && shipDestroyedCallback) {
+      shipDestroyedCallback(ship.type);
+      ship.scoreAwarded = true;
+    }
+
     ship.state = "dying";
     ship.fallSpeed = 0.02;
     ship.isFiring = false;

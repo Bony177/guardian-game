@@ -13,6 +13,7 @@ import {
   startShipsSession,
   stopShipsSession,
   resetShips,
+  setShipDestroyedCallback,
 } from "./ships";
 import { createShield } from "./shield";
 
@@ -247,8 +248,18 @@ function Scene() {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const shipSessionId = startShipsSession();
+    const scoreValueElement = document.getElementById("scoreValue");
+    const powerFillElement = document.getElementById("powerFill");
     const shieldHealthFill = document.getElementById("shieldHealthFill");
     const shieldHealthValue = document.getElementById("shieldHealthValue");
+    const scoreByShipType = {
+      1: 100,
+      2: 200,
+      3: 3000,
+    };
+    let scoreCurrent = 0;
+    let scoreTarget = 0;
+    let powerCycleTimer = null;
     const barrelExpState = {
       isPlaying: false,
       elapsed: 0,
@@ -1268,6 +1279,101 @@ function Scene() {
       }
     }
 
+    function formatScore(value) {
+      return Math.max(0, Math.round(value)).toLocaleString();
+    }
+
+    function showScorePopup(points) {
+      const scoreBox = scoreValueElement?.closest(".score-box");
+      if (!scoreBox) return;
+
+      const popup = document.createElement("div");
+      popup.className = "score-popup";
+      popup.textContent = `+${points.toLocaleString()}`;
+      popup.style.left = `${58 + Math.random() * 22}%`;
+      popup.style.top = `${44 + Math.random() * 12}%`;
+      scoreBox.appendChild(popup);
+
+      window.requestAnimationFrame(() => {
+        popup.classList.add("is-visible");
+      });
+
+      window.setTimeout(() => {
+        popup.remove();
+      }, 800);
+    }
+
+    function addScore(shipType) {
+      const points = scoreByShipType[shipType] ?? 0;
+      if (!points) return;
+
+      scoreTarget += points;
+      showScorePopup(points);
+    }
+
+    function updateScoreUI(deltaSeconds) {
+      if (!scoreValueElement) return;
+
+      const difference = scoreTarget - scoreCurrent;
+      if (difference <= 0) {
+        if (scoreValueElement.textContent !== formatScore(scoreCurrent)) {
+          scoreValueElement.textContent = formatScore(scoreCurrent);
+        }
+        return;
+      }
+
+      const step = Math.max(1, Math.ceil(difference * Math.min(1, deltaSeconds * 8)));
+      scoreCurrent = Math.min(scoreCurrent + step, scoreTarget);
+      scoreValueElement.textContent = formatScore(scoreCurrent);
+    }
+
+    function applyPowerFillColor(level) {
+      if (!powerFillElement) return;
+      powerFillElement.classList.remove(
+        "power-fill-green",
+        "power-fill-yellow",
+        "power-fill-red",
+      );
+
+      if (level > 70) {
+        powerFillElement.classList.add("power-fill-green");
+      } else if (level >= 40) {
+        powerFillElement.classList.add("power-fill-yellow");
+      } else {
+        powerFillElement.classList.add("power-fill-red");
+      }
+    }
+
+    function setPowerLevel(level) {
+      if (!powerFillElement) return;
+      const safeLevel = THREE.MathUtils.clamp(level, 1, 100);
+      powerFillElement.style.width = `${safeLevel}%`;
+      applyPowerFillColor(safeLevel);
+    }
+
+    function schedulePowerCycle() {
+      if (!powerFillElement || disposed) return;
+
+      const nextLevel = THREE.MathUtils.randFloat(40, 100);
+      setPowerLevel(nextLevel);
+
+      const delayMs = Math.round(THREE.MathUtils.randFloat(2000, 4000));
+      powerCycleTimer = window.setTimeout(schedulePowerCycle, delayMs);
+    }
+
+    if (scoreValueElement) {
+      scoreCurrent = 0;
+      scoreTarget = 0;
+      scoreValueElement.textContent = "0";
+    }
+
+    if (powerFillElement) {
+      powerFillElement.style.transition = "width 700ms ease, background-color 300ms ease";
+      schedulePowerCycle();
+    }
+
+    setShipDestroyedCallback(addScore);
+
     function animate() {
       if (disposed) return;
       rafId = window.requestAnimationFrame(animate);
@@ -1290,6 +1396,7 @@ function Scene() {
 
       updateRadarUI();
       updateShieldUI();
+      updateScoreUI(deltaSeconds);
 
       if (gunBarrel) {
         if (isRecoiling) {
@@ -1389,10 +1496,14 @@ function Scene() {
 
     return () => {
       disposed = true;
+      setShipDestroyedCallback(null);
       stopShipsSession(shipSessionId);
 
       if (rafId !== null) {
         window.cancelAnimationFrame(rafId);
+      }
+      if (powerCycleTimer !== null) {
+        window.clearTimeout(powerCycleTimer);
       }
 
       window.removeEventListener("dblclick", onDoubleClick);

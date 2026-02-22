@@ -466,6 +466,22 @@ body {
   width: 78%;
   background: linear-gradient(90deg, rgba(43, 242, 255, 0.65), rgba(40, 199, 255, 0.65));
   box-shadow: 0 0 12px rgba(51, 234, 255, 0.35);
+  transition: width 700ms ease, background-color 300ms ease;
+}
+
+.power-fill-green {
+  background: linear-gradient(90deg, #33d17a, #1ea85a);
+  box-shadow: 0 0 12px rgba(51, 209, 122, 0.38);
+}
+
+.power-fill-yellow {
+  background: linear-gradient(90deg, #ffd85a, #ffbf2f);
+  box-shadow: 0 0 12px rgba(255, 191, 47, 0.35);
+}
+
+.power-fill-red {
+  background: linear-gradient(90deg, #ff6b5a, #ff3d2f);
+  box-shadow: 0 0 12px rgba(255, 61, 47, 0.35);
 }
 
 #vaultHealthValue {
@@ -498,6 +514,7 @@ body {
     inset 0 0 0 1px rgba(162, 117, 44, 0.24),
     inset 0 0 14px rgba(204, 132, 34, 0.12),
     0 0 14px rgba(255, 165, 52, 0.08);
+  overflow: visible;
 }
 
 .score-box::before {
@@ -534,6 +551,35 @@ body {
   font-weight: 700;
   color: #ffd581;
   text-shadow: 0 0 11px var(--hud-orange-soft);
+}
+
+.score-popup {
+  position: absolute;
+  transform: translate(-50%, 0);
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffe7ae;
+  text-shadow: 0 0 12px rgba(255, 183, 73, 0.65);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.score-popup.is-visible {
+  animation: scorePopupFloat 0.8s ease forwards;
+}
+
+@keyframes scorePopupFloat {
+  0% {
+    transform: translate(-50%, 4px) scale(0.92);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -32px) scale(1.04);
+    opacity: 0;
+  }
 }
 
 .film-grain {
