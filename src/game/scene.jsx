@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { createChimneySmoke } from "./object/smoke";
 import { createSpriteExplosion } from "./spriteexplosion";
+import HUD from "./HUD";
 
 import {
   spawnShip,
@@ -205,6 +206,10 @@ const BARREL_EXP_DEFAULTS = {
 
 function Scene() {
   const mountRef = useRef(null);
+  const [score, setScore] = useState(0);
+  const [enemyCount, setEnemyCount] = useState(0);
+  const [shieldPercent, setShieldPercent] = useState(100);
+  const [powerLevel, setPowerLevel] = useState(80);
 
   useEffect(() => {
     if (!mountRef.current) return undefined;
@@ -248,17 +253,11 @@ function Scene() {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const shipSessionId = startShipsSession();
-    const scoreValueElement = document.getElementById("scoreValue");
-    const powerFillElement = document.getElementById("powerFill");
-    const shieldHealthFill = document.getElementById("shieldHealthFill");
-    const shieldHealthValue = document.getElementById("shieldHealthValue");
     const scoreByShipType = {
       1: 100,
       2: 200,
       3: 3000,
     };
-    let scoreCurrent = 0;
-    let scoreTarget = 0;
     let powerCycleTimer = null;
     const barrelExpState = {
       isPlaying: false,
@@ -1252,10 +1251,7 @@ function Scene() {
       const count = getActiveShipCount();
       if (count !== lastRadarCount) {
         lastRadarCount = count;
-        const enemyNumber = document.getElementById("enemyNumber");
-        if (enemyNumber) {
-          enemyNumber.textContent = count.toString().padStart(2, "0");
-        }
+        setEnemyCount(count);
         generateRadarDots(count);
       }
     }
@@ -1271,12 +1267,7 @@ function Scene() {
       if (percent === lastShieldPercent) return;
       lastShieldPercent = percent;
 
-      if (shieldHealthFill) {
-        shieldHealthFill.style.width = `${percent}%`;
-      }
-      if (shieldHealthValue) {
-        shieldHealthValue.textContent = `${percent}%`;
-      }
+      setShieldPercent(percent);
     }
 
     function formatScore(value) {
@@ -1284,7 +1275,9 @@ function Scene() {
     }
 
     function showScorePopup(points) {
-      const scoreBox = scoreValueElement?.closest(".score-box");
+      // Score popups are still needed for visual feedback in the DOM
+      // Find the score box in the rendered HUD
+      const scoreBox = document.querySelector(".score-box");
       if (!scoreBox) return;
 
       const popup = document.createElement("div");
@@ -1307,70 +1300,37 @@ function Scene() {
       const points = scoreByShipType[shipType] ?? 0;
       if (!points) return;
 
-      scoreTarget += points;
+      setScore((prevScore) => prevScore + points);
       showScorePopup(points);
     }
 
     function updateScoreUI(deltaSeconds) {
-      if (!scoreValueElement) return;
-
-      const difference = scoreTarget - scoreCurrent;
-      if (difference <= 0) {
-        if (scoreValueElement.textContent !== formatScore(scoreCurrent)) {
-          scoreValueElement.textContent = formatScore(scoreCurrent);
-        }
-        return;
-      }
-
-      const step = Math.max(1, Math.ceil(difference * Math.min(1, deltaSeconds * 8)));
-      scoreCurrent = Math.min(scoreCurrent + step, scoreTarget);
-      scoreValueElement.textContent = formatScore(scoreCurrent);
+      // Score updates are handled through React state
+      // The animation is performed in the HUD component
     }
 
     function applyPowerFillColor(level) {
-      if (!powerFillElement) return;
-      powerFillElement.classList.remove(
-        "power-fill-green",
-        "power-fill-yellow",
-        "power-fill-red",
-      );
-
-      if (level > 70) {
-        powerFillElement.classList.add("power-fill-green");
-      } else if (level >= 40) {
-        powerFillElement.classList.add("power-fill-yellow");
-      } else {
-        powerFillElement.classList.add("power-fill-red");
-      }
+      // Color is now determined in HUD.jsx based on power level prop
+      // No DOM manipulation needed
     }
 
-    function setPowerLevel(level) {
-      if (!powerFillElement) return;
+    function setPowerLevelInternal(level) {
       const safeLevel = THREE.MathUtils.clamp(level, 1, 100);
-      powerFillElement.style.width = `${safeLevel}%`;
-      applyPowerFillColor(safeLevel);
+      setPowerLevel(Math.round(safeLevel));
     }
 
     function schedulePowerCycle() {
-      if (!powerFillElement || disposed) return;
+      if (disposed) return;
 
       const nextLevel = THREE.MathUtils.randFloat(40, 100);
-      setPowerLevel(nextLevel);
+      setPowerLevelInternal(nextLevel);
 
       const delayMs = Math.round(THREE.MathUtils.randFloat(2000, 4000));
       powerCycleTimer = window.setTimeout(schedulePowerCycle, delayMs);
     }
 
-    if (scoreValueElement) {
-      scoreCurrent = 0;
-      scoreTarget = 0;
-      scoreValueElement.textContent = "0";
-    }
-
-    if (powerFillElement) {
-      powerFillElement.style.transition = "width 700ms ease, background-color 300ms ease";
-      schedulePowerCycle();
-    }
+    // Initialize power cycle
+    schedulePowerCycle();
 
     setShipDestroyedCallback(addScore);
 
@@ -1577,14 +1537,22 @@ function Scene() {
   }, []);
 
   return (
-    <div
-      ref={mountRef}
-      style={{
-        width: "100vw",
-        height: "100vh",
-        overflow: "hidden",
-      }}
-    />
+    <>
+      <HUD
+        score={score}
+        enemyCount={enemyCount}
+        shieldPercent={shieldPercent}
+        powerLevel={powerLevel}
+      />
+      <div
+        ref={mountRef}
+        style={{
+          width: "100vw",
+          height: "100vh",
+          overflow: "hidden",
+        }}
+      />
+    </>
   );
 }
 

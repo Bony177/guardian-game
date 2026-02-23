@@ -1,0 +1,107 @@
+/* Landing page styles - scoped to .landing container */
+.landing {
+  height: 100vh;
+  position: relative;
+  margin: 0;
+  font-family: sans-serif;
+  background: #0b0f18;
+  color: white;
+}
+
+.landing .header {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 40px;
+}
+
+.landing .nav-left button,
+.landing .play-now {
+  margin-right: 20px;
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.landing .hero {
+  padding: 100px 60px;
+}
+
+.landing .title {
+  font-size: 80px;
+  font-weight: bold;
+}
+
+.landing .hero-buttons button {
+  margin-right: 20px;
+  padding: 12px 24px;
+  cursor: pointer;
+}
+
+.landing .bottom-panels {
+  position: absolute;
+  bottom: 40px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+}
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade 0.3s ease;
+  z-index: 9999;
+}
+
+.landing .card {
+  width: 300px;
+  height: 150px;
+  border: 1px solid #00bfff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+
+
+.overlay-content {
+  text-align: center;
+}
+.close-btn {
+  position: absolute;
+  top: 30px;
+  right: 40px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  font-size: 40px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.arrow.left {
+  left: 40px;
+}
+
+.arrow.right {
+  right: 40px;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
