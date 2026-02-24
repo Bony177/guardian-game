@@ -17,6 +17,8 @@ function Landing({
 
   useEffect(() => {
     const scene = new THREE.Scene();
+    scene.background = null; // Transparent background
+    scene.fog = null; // No fog to hide background
 
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -29,10 +31,13 @@ function Landing({
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
+      transparent: true,
+      preserveDrawingBuffer: false,
     });
 
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     renderer.domElement.style.position = "fixed";
     renderer.domElement.style.top = "0";
@@ -50,6 +55,10 @@ function Landing({
 
     let animationId;
     const loader = new GLTFLoader();
+    const emissiveTexture = new THREE.TextureLoader().load(
+      "/textures/gunemap.jpg",
+    );
+    emissiveTexture.flipY = false;
 
     // Create turret group
     const turretGroup = new THREE.Group();
@@ -58,7 +67,18 @@ function Landing({
     // Load tower
     loader.load("/models/guntower.glb", (gltf) => {
       const tower = gltf.scene;
-      tower.scale.set(2, 2, 2); // adjust if needed
+      tower.scale.set(2, 2, 2);
+
+      tower.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material = child.material.clone();
+          child.material.emissiveMap = emissiveTexture;
+          child.material.emissive = new THREE.Color(0xffffff);
+          child.material.emissiveIntensity = 0.1;
+          child.material.needsUpdate = true;
+        }
+      });
+
       turretGroup.add(tower);
     });
 
@@ -67,14 +87,21 @@ function Landing({
 
     loader.load("/models/gun_barrel.glb", (gltf) => {
       barrelModel = gltf.scene;
-      barrelModel.scale.set(1, 1, 1); // adjust if needed
-
-      // Move barrel slightly upward if needed
+      barrelModel.scale.set(1, 1, 1);
       barrelModel.position.set(0, 1, 0);
+
+      barrelModel.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material = child.material.clone();
+          child.material.emissiveMap = emissiveTexture;
+          child.material.emissive = new THREE.Color(0xff7a00); // orange
+          child.material.emissiveIntensity = 1.5;
+          child.material.needsUpdate = true;
+        }
+      });
 
       turretGroup.add(barrelModel);
     });
-
     // Position entire turret on right side
     turretGroup.position.set(2, -1, 3);
 

@@ -4,7 +4,7 @@
 
 body {
   margin: 0;
-  background: #0b0f18; /* Deep space base */
+  background: transparent;
 }
 
 
@@ -32,6 +32,11 @@ body {
   inset: 0;
   z-index: 2; /* above background image but below UI */
   pointer-events: none;
+  background-color: transparent;
+}
+
+.three-canvas canvas {
+  background-color: transparent !important;
 }
 
 
