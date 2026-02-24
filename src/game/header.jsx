@@ -1,4 +1,4 @@
-function Header({ setActiveOverlay }) {
+function Header({ setActiveOverlay, startGame }) {
   return (
     <div className="header">
       <div className="nav-left">
@@ -8,7 +8,7 @@ function Header({ setActiveOverlay }) {
         <button onClick={() => setActiveOverlay("community")}>COMMUNITY</button>
       </div>
 
-      <button className="play-now" onClick={() => setActiveOverlay("missions")}>
+      <button className="play-now" onClick={startGame}>
         PLAY NOW
       </button>
     </div>

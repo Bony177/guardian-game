@@ -1,17 +1,61 @@
-/* Landing page styles - scoped to .landing container */
+/* ===============================
+   BASE BACKGROUND (Lowest Layer)
+================================= */
+
+body {
+  margin: 0;
+  background: #0b0f18; /* Deep space base */
+}
+
+
+/* ===============================
+   LANDING CONTAINER
+================================= */
+
 .landing {
   height: 100vh;
   position: relative;
-  margin: 0;
   font-family: sans-serif;
-  background: #0b0f18;
+  background: transparent; /* IMPORTANT */
   color: white;
+  z-index: 10; /* UI base layer */
 }
+
+
+/* ===============================
+   BACKGROUND IMAGE LAYER
+================================= */
+
+/* Three.js canvas layer - keep transparent and under UI */
+.three-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 2; /* above background image but below UI */
+  pointer-events: none;
+}
+
+
+.terrain {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 1; /* Above body background */
+  pointer-events: none;
+}
+
+
+/* ===============================
+   HEADER (UI Layer)
+================================= */
 
 .landing .header {
   display: flex;
   justify-content: space-between;
   padding: 20px 40px;
+  position: relative;
+  z-index: 20;
 }
 
 .landing .nav-left button,
@@ -23,8 +67,15 @@
   cursor: pointer;
 }
 
+
+/* ===============================
+   HERO SECTION (UI Layer)
+================================= */
+
 .landing .hero {
   padding: 100px 60px;
+  position: relative;
+  z-index: 20;
 }
 
 .landing .title {
@@ -38,6 +89,11 @@
   cursor: pointer;
 }
 
+
+/* ===============================
+   BOTTOM PANELS (UI Layer)
+================================= */
+
 .landing .bottom-panels {
   position: absolute;
   bottom: 40px;
@@ -45,16 +101,7 @@
   display: flex;
   justify-content: center;
   gap: 40px;
-}
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.95);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: fade 0.3s ease;
-  z-index: 9999;
+  z-index: 20;
 }
 
 .landing .card {
@@ -68,10 +115,25 @@
 }
 
 
+/* ===============================
+   OVERLAY (TOP MOST LAYER)
+================================= */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade 0.3s ease;
+  z-index: 9999;
+}
 
 .overlay-content {
   text-align: center;
 }
+
 .close-btn {
   position: absolute;
   top: 30px;
@@ -101,7 +163,21 @@
   right: 40px;
 }
 
+
+/* ===============================
+   ANIMATION
+================================= */
+
 @keyframes fade {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+
+  background: url("/textures/noise.jpg");
+  opacity: 0.35; /* 🔥 adjust this */
 }
