@@ -48,16 +48,43 @@ function Landing({
     light.position.set(5, 5, 5);
     scene.add(light);
 
-    const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
-
     let animationId;
+    const loader = new GLTFLoader();
+
+    // Create turret group
+    const turretGroup = new THREE.Group();
+    scene.add(turretGroup);
+
+    // Load tower
+    loader.load("/models/guntower.glb", (gltf) => {
+      const tower = gltf.scene;
+      tower.scale.set(2, 2, 2); // adjust if needed
+      turretGroup.add(tower);
+    });
+
+    // Load barrel
+    let barrelModel;
+
+    loader.load("/models/gun_barrel.glb", (gltf) => {
+      barrelModel = gltf.scene;
+      barrelModel.scale.set(1, 1, 1); // adjust if needed
+
+      // Move barrel slightly upward if needed
+      barrelModel.position.set(0, 1, 0);
+
+      turretGroup.add(barrelModel);
+    });
+
+    // Position entire turret on right side
+    turretGroup.position.set(2, -1, 3);
 
     function animate() {
       animationId = requestAnimationFrame(animate);
-      cube.rotation.y += 0.01;
+
+      if (barrelModel) {
+        barrelModel.rotation.y += 0.01; // rotate only barrel
+      }
+
       renderer.render(scene, camera);
     }
 
