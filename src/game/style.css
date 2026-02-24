@@ -179,5 +179,5 @@ body {
   z-index: 10000;
 
   background: url("/textures/noise.jpg");
-  opacity: 0; /* 🔥 adjust this */
+  opacity: 0.25; /* 🔥 adjust this */
 }

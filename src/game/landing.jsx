@@ -45,7 +45,7 @@ function Landing({
     }
 
     const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5, 5, 5);
+    light.position.set(-50, 50, 50);
     scene.add(light);
 
     let animationId;
