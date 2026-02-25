@@ -176,6 +176,7 @@ function Landing({
       </div>
 
       <img src="/textures/newterrani.png" className="terrain" />
+      <div className="atmosphere-global" />
       <div className="atmosphere" />
       <img src="/textures/shield.png" className="shield" />
       <div className="grain" />

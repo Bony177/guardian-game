@@ -54,6 +54,22 @@ body {
     rgba(10, 15, 40, 0.1)
   );
 }
+
+.atmosphere-global {
+  position: fixed;
+  bottom: 0;          /* move this to adjust height position */
+  width: 100%;
+  height: 60%;       /* control strip thickness */
+  z-index: 2;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to top,
+    rgba(10, 15, 40, 0.4),   /* strong at horizon */
+    rgba(10, 15, 40, 0.1),
+    rgba(10, 15, 40, 0.0)
+  );
+}
 .terrain {
   position: fixed;
   inset: 0;
