@@ -343,7 +343,7 @@ body {
 
 .embers-strip {
   position: fixed;
-  bottom: -5vh;           /* adjust vertical placement */
+  bottom: -10vh;           /* adjust vertical placement */
   width: 100%;
   overflow: hidden;
   pointer-events: none;
@@ -370,4 +370,68 @@ body {
   0%   { opacity: 0.85; }
   50%  { opacity: 0.15; }
   100% { opacity: 0.85; }
+}
+
+.shield-pulse {
+  position: fixed;
+  bottom: 0px;      /* match shield */
+  left: 25%;
+  transform: translateX(-50%) scale(1);
+
+  width: 800px;       /* match shield width */
+  height: 800px;
+
+  pointer-events: none;
+  z-index: 6;
+
+  background: radial-gradient(
+    circle,
+    rgba(161, 209, 244, 0.7) 0%,
+    rgba(0, 150, 255, 0.4) 30%,
+    rgba(0, 150, 255, 0.15) 55%,
+    rgba(0, 150, 255, 0) 75%
+  );
+
+  opacity: 0.1;
+
+  animation: rarePulse 15s ease-in-out infinite;
+}
+@keyframes rarePulse {
+  0%, 85%, 100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1);
+  }
+
+  88% {
+    opacity: 0.5;
+    transform: translateX(-50%) scale(1.05);
+  }
+
+  92% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+.shield-glow-static {
+  position: fixed;
+  bottom: 0px;          /* same as shield */
+  left: 24%;
+  transform: translateX(-50%);
+
+  width: 800px;           /* match shield */
+  height: 800px;
+
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.6;
+
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.6) 0%,      /* white core */
+    rgba(0, 170, 255, 0.5) 25%,       /* blue mid */
+    rgba(0, 120, 255, 0.25) 45%,      /* outer blue */
+    rgba(0, 120, 255, 0.0) 70%
+  );
+
+  filter: blur(25px);
 }

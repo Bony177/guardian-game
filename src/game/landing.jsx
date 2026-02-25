@@ -181,6 +181,8 @@ function Landing({
       <div className="atmosphere-global" />
       <div className="atmosphere" />
       <img src="/textures/shield.png" className="shield" />
+      <div className="shield-glow-static" />
+      <div className="shield-pulse" />
       <div className="grain" />
 
       <Header setActiveOverlay={setActiveOverlay} startGame={startGame} />
