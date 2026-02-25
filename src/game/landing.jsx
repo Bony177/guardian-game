@@ -88,7 +88,7 @@ function Landing({
     loader.load("/models/gun_barrel.glb", (gltf) => {
       barrelModel = gltf.scene;
       barrelModel.scale.set(1, 1, 1);
-      barrelModel.position.set(-0.1, 1.3, 0.01);
+      barrelModel.position.set(-0.12, 1.28, 0.05);
 
       barrelModel.traverse((child) => {
         if (child.isMesh && child.material) {
@@ -104,12 +104,22 @@ function Landing({
     });
     // Position entire turret on right side
     turretGroup.position.set(2, -1, 3);
+    let clock = new THREE.Clock();
 
     function animate() {
       animationId = requestAnimationFrame(animate);
 
       if (barrelModel) {
-        barrelModel.rotation.y += 0.01; // rotate only barrel
+        const t = clock.getElapsedTime();
+
+        const speed = 0.6; // scanning speed
+        const maxAngle = 0.9; // left-right range
+
+        // Smooth scan
+        const scan = Math.sin(t * speed) * maxAngle;
+
+        barrelModel.rotation.x = 0;
+        barrelModel.rotation.y = scan;
       }
 
       renderer.render(scene, camera);
@@ -145,7 +155,9 @@ function Landing({
       />
 
       <div className="hero">
-        <h1 className="title">SIGNAL BREACH</h1>
+        <h1 className="title">
+          SIGNAL<br></br> BREACH
+        </h1>
         <p className="subtitle">THE SIGNAL BREACHED SOME SHIT BLAH BLAH</p>
 
         <div className="hero-buttons">
