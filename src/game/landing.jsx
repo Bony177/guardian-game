@@ -67,7 +67,7 @@ function Landing({
     // Load tower
     loader.load("/models/guntower.glb", (gltf) => {
       const tower = gltf.scene;
-      tower.scale.set(2, 2, 2);
+      tower.scale.set(2, 3, 2);
 
       tower.traverse((child) => {
         if (child.isMesh && child.material) {
@@ -88,7 +88,7 @@ function Landing({
     loader.load("/models/gun_barrel.glb", (gltf) => {
       barrelModel = gltf.scene;
       barrelModel.scale.set(1, 1, 1);
-      barrelModel.position.set(0, 1, 0);
+      barrelModel.position.set(-0.1, 1.3, 0.01);
 
       barrelModel.traverse((child) => {
         if (child.isMesh && child.material) {
