@@ -1,7 +1,7 @@
 import Header from "./header";
 import Overlay from "./overlay";
 import "./style.css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
@@ -38,6 +38,12 @@ function Landing({
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // Better lighting response
+    renderer.physicallyCorrectLights = true;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     renderer.domElement.style.position = "fixed";
     renderer.domElement.style.top = "0";
@@ -49,9 +55,22 @@ function Landing({
       mountRef.current.appendChild(renderer.domElement);
     }
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
+    // Main directional key light
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
     light.position.set(-50, 50, 50);
+    light.castShadow = true;
+    light.shadow.bias = -0.0005;
     scene.add(light);
+
+    // Ambient fill so dark areas are visible
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+
+    // Point light close to turret to brighten models
+    const turretPoint = new THREE.PointLight(0xffffff, 1.7, 10, 2);
+    turretPoint.position.set(1, 0.5, 3.6);
+    turretPoint.castShadow = true;
+    scene.add(turretPoint);
 
     let animationId;
     const loader = new GLTFLoader();
@@ -74,8 +93,12 @@ function Landing({
           child.material = child.material.clone();
           child.material.emissiveMap = emissiveTexture;
           child.material.emissive = new THREE.Color(0xffffff);
-          child.material.emissiveIntensity = 0.1;
+          // boost emissive so tower is more visible
+          child.material.emissiveIntensity = 0;
           child.material.needsUpdate = true;
+          // allow lighting and shadows
+          child.castShadow = true;
+          child.receiveShadow = true;
         }
       });
 
@@ -95,8 +118,12 @@ function Landing({
           child.material = child.material.clone();
           child.material.emissiveMap = emissiveTexture;
           child.material.emissive = new THREE.Color(0xff7a00); // orange
-          child.material.emissiveIntensity = 1.5;
+          // make barrel glow brighter
+          child.material.emissiveIntensity = 6.0;
           child.material.needsUpdate = true;
+          // enable shadows on barrel meshes
+          child.castShadow = true;
+          child.receiveShadow = true;
         }
       });
 
