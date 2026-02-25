@@ -340,3 +340,34 @@ body {
   z-index: 0; /* 🔥 below terrain */
   pointer-events: none;
 }
+
+.embers-strip {
+  position: fixed;
+  bottom: -5vh;           /* adjust vertical placement */
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.embers-strip img {
+  width: 140%;
+  opacity: 0.7;           /* stay between 0.4 – 0.6 */
+  mix-blend-mode: screen;
+
+  animation: drift 28s linear infinite,
+             flicker 6s ease-in-out infinite;
+}
+
+/* Smooth slow drift */
+@keyframes drift {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(20%); }
+}
+
+/* Subtle breathing glow */
+@keyframes flicker {
+  0%   { opacity: 0.85; }
+  50%  { opacity: 0.15; }
+  100% { opacity: 0.85; }
+}
