@@ -435,3 +435,29 @@ body {
 
   filter: blur(25px);
 }
+
+
+.mountain-smoke {
+  position: fixed;
+  bottom: 45vh;       /* adjust to match mountain horizon */
+  width: 100%;
+  height: 50vh;       /* control vertical spread */
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mountain-smoke img {
+  width: 150%;
+  position: relative;
+  left: -25%;
+  opacity: 0.35;      /* keep subtle */
+  filter: blur(6px);
+
+  animation: smokeDrift 30s linear infinite;
+}
+
+@keyframes smokeDrift {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(10%); }
+}

@@ -178,6 +178,9 @@ function Landing({
         <img src="/textures/firesparkle.png" />
       </div>
       <img src="/textures/newterrani.png" className="terrain" />
+      <div className="mountain-smoke">
+        <img src="/textures/smoke.png" />
+      </div>
       <div className="atmosphere-global" />
       <div className="atmosphere" />
       <img src="/textures/shield.png" className="shield" />
