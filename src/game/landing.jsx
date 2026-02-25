@@ -4,6 +4,7 @@ import "./style.css";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import Sandbox from "./stars";
 
 function Landing({
   activeOverlay,
@@ -170,7 +171,9 @@ function Landing({
 
       {/* Background */}
 
-      <img src="/textures/skyyy.jpg" className="sky" />
+      <div className="stars-layer">
+        <Sandbox />
+      </div>
       <img src="/textures/newterrani.png" className="terrain" />
       <img src="/textures/shield.png" className="shield" />
       <div className="grain" />
