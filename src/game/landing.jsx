@@ -174,7 +174,9 @@ function Landing({
       <div className="stars-layer">
         <Sandbox />
       </div>
+
       <img src="/textures/newterrani.png" className="terrain" />
+      <div className="atmosphere" />
       <img src="/textures/shield.png" className="shield" />
       <div className="grain" />
 

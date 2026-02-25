@@ -39,7 +39,21 @@ body {
   background-color: transparent !important;
 }
 
+.atmosphere {
+  position: fixed;
+  bottom: 260px;          /* move this to adjust height position */
+  width: 100%;
+  height: 30vh;       /* control strip thickness */
+  z-index: 2;
+  pointer-events: none;
 
+  background: linear-gradient(
+    to top,
+    rgba(10, 15, 40, 0.4),   /* strong at horizon */
+    rgba(10, 15, 40, 0.3),
+    rgba(10, 15, 40, 0.1)
+  );
+}
 .terrain {
   position: fixed;
   inset: 0;
