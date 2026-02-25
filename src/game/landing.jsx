@@ -142,7 +142,10 @@ function Landing({
       <div ref={mountRef} className="three-canvas" />
 
       {/* Background */}
-      <img src="/textures/terrainb.png" className="terrain" />
+
+      <img src="/textures/skyyy.jpg" className="sky" />
+      <img src="/textures/newterrani.png" className="terrain" />
+      <img src="/textures/shield.png" className="shield" />
       <div className="grain" />
 
       <Header setActiveOverlay={setActiveOverlay} startGame={startGame} />
