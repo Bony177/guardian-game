@@ -1,8 +1,83 @@
 import "./overlay.css";
+import { useState } from "react";
 
 const POPUP_OVERLAYS = ["home", "news", "factions", "community"];
 const FULLSCREEN_OVERLAYS = ["missions", "armory", "hangar"];
+const MISSION_SLIDES = [
+  {
+    heading: "THE ARRIVAL",
+    text: `They came without warning.
+No message. No demands.
+Only extraction.
 
+From orbit, they stripped Earth of oceans, minerals, power.
+Cities burned beneath silent skies.`,
+    image: "/slides/slide1.png",
+  },
+  {
+    heading: "THE FALL",
+    text: `Defense fleets failed. Nations collapsed.
+Satellites went dark one by one.
+
+Within months, humanity was no longer a civilization.
+
+We were survivors.`,
+    image: "/slides/slide2.png",
+  },
+  {
+    heading: "THE RESISTANCE",
+    text: `The remaining settlements moved underground.
+Hidden beneath ruined continents.
+
+Not refugees.
+
+Resistance.
+
+We built fortresses.
+We built weapons.
+We prepared for the worst.`,
+    image: "/slides/slide3.png",
+  },
+  {
+    heading: "THE SILENCE",
+    text: `To survive, we erased ourselves.
+
+A global Signal Jammer masks every emission.
+No radio. No heat signatures. No trace.
+
+As long as we remain silent…
+they cannot find us.`,
+    image: "/slides/slide4.png",
+  },
+  {
+    heading: "THE BREACH",
+    text: `But silence is fragile.
+
+Power shifts. Systems falter.
+For a few minutes — a signal escapes.
+
+A Signal Breach.
+
+And when it happens…
+they respond.`,
+    image: "/slides/slide5.png",
+  },
+  {
+    heading: "PROTOCOL PROTECTOR",
+    text: `Each settlement is guarded by a Defense Tower.
+
+When breach protocol activates,
+you take control of the cannon.
+
+Hold the line.
+Protect the settlement.
+Restore the silence.
+
+If the tower falls —
+another piece of Earth is harvested.`,
+    image: "/slides/slide6.png",
+  },
+];
 const OVERLAY_CONTENT = {
   home: {
     title: "HOME",
@@ -42,6 +117,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
   // Determine if it's a modal or fullscreen overlay
   const isPopup = POPUP_OVERLAYS.includes(activeOverlay);
   const isFullscreen = FULLSCREEN_OVERLAYS.includes(activeOverlay);
+  const [slideIndex, setSlideIndex] = useState(0);
 
   // Get data from OVERLAY_CONTENT
   const overlayKey = isFullscreen
@@ -66,6 +142,51 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
   }
 
   if (isFullscreen) {
+    if (activeOverlay === "missions") {
+      const slide = MISSION_SLIDES[slideIndex];
+
+      return (
+        <div className="overlay-fullscreen mission-briefing">
+          <button className="close-btn" onClick={closeOverlay}>
+            ✕
+          </button>
+
+          <div className="briefing-container">
+            <div className="briefing-left">
+              <h1 className="briefing-heading">{slide.heading}</h1>
+
+              <p className="briefing-text">{slide.text}</p>
+            </div>
+
+            <div className="briefing-right">
+              <img src={slide.image} alt="Mission Slide" />
+            </div>
+          </div>
+
+          <div className="briefing-controls">
+            <button
+              onClick={() => setSlideIndex((prev) => Math.max(prev - 1, 0))}
+              disabled={slideIndex === 0}
+            >
+              BACK
+            </button>
+
+            <button
+              onClick={() => {
+                if (slideIndex < MISSION_SLIDES.length - 1) {
+                  setSlideIndex((prev) => prev + 1);
+                } else {
+                  closeOverlay();
+                  // optionally call startGame here
+                }
+              }}
+            >
+              {slideIndex === MISSION_SLIDES.length - 1 ? "DEPLOY" : "NEXT"}
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="overlay-fullscreen">
         <button className="close-btn" onClick={closeOverlay}>
