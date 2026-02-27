@@ -12,7 +12,7 @@ Only extraction.
 
 From orbit, they stripped Earth of oceans, minerals, power.
 Cities burned beneath silent skies.`,
-    image: "/slides/slide1.png",
+    image: "/textures/slide1.png",
   },
   {
     heading: "THE FALL",
@@ -22,7 +22,7 @@ Satellites went dark one by one.
 Within months, humanity was no longer a civilization.
 
 We were survivors.`,
-    image: "/slides/slide2.png",
+    image: "/textures/slide2.png",
   },
   {
     heading: "THE RESISTANCE",
@@ -36,7 +36,7 @@ Resistance.
 We built fortresses.
 We built weapons.
 We prepared for the worst.`,
-    image: "/slides/slide3.png",
+    image: "/textures/slide3.png",
   },
   {
     heading: "THE SILENCE",
@@ -47,7 +47,7 @@ No radio. No heat signatures. No trace.
 
 As long as we remain silent…
 they cannot find us.`,
-    image: "/slides/slide4.png",
+    image: "/textures/slide4.png",
   },
   {
     heading: "THE BREACH",
@@ -60,7 +60,7 @@ A Signal Breach.
 
 And when it happens…
 they respond.`,
-    image: "/slides/slide5.png",
+    image: "/textures/slide5.png",
   },
   {
     heading: "PROTOCOL PROTECTOR",
@@ -75,7 +75,7 @@ Restore the silence.
 
 If the tower falls —
 another piece of Earth is harvested.`,
-    image: "/slides/slide6.png",
+    image: "/textures/slide6.png",
   },
 ];
 const OVERLAY_CONTENT = {
@@ -152,6 +152,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
           </button>
 
           <div className="briefing-container">
+            <div className="hud-frame"></div>
             <div className="briefing-left">
               <h1 className="briefing-heading">{slide.heading}</h1>
 
