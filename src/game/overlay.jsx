@@ -1,8 +1,47 @@
 import "./overlay.css";
 import { useState } from "react";
+import ShipViewer from "./ShipViewer";
 
 const POPUP_OVERLAYS = ["home", "news", "factions", "community"];
 const FULLSCREEN_OVERLAYS = ["missions", "armory", "hangar"];
+const SHIP_SLIDES = [
+  {
+    heading: "SCARAB INTERCEPTOR",
+    model: "/models/ship1.glb",
+    text: `CLASS: LIGHT ASSAULT RECON
+ORIGIN: OUTER GRID FABRICATOR
+HEALTH: 100
+SHIELD: 0
+ARMOR RATING: 15%
+
+High mobility unit used for first-contact engagement.
+Designed for speed and pilot suppression.`,
+  },
+  {
+    heading: "REVENANT CRUISER",
+    model: "/models/ship2.glb",
+    text: `CLASS: TACTICAL SUPPRESSION VESSEL
+ORIGIN: DEEP GRID WAR FOUNDRY
+HEALTH: 300
+SHIELD: 120
+ARMOR RATING: 40%
+
+Mid-weight combat ship with adaptive targeting
+and partial shield regeneration.`,
+  },
+  {
+    heading: "OBLIVION DREADCORE",
+    model: "/models/ship3.glb",
+    text: `CLASS: AUTONOMOUS WAR DREADNOUGHT
+ORIGIN: SIGNAL SOURCE PRIME
+HEALTH: 1200
+SHIELD: 500
+ARMOR RATING: 65%
+
+Heavy-class extinction unit equipped with
+singularity fusion core and rage protocol.`,
+  },
+];
 const MISSION_SLIDES = [
   {
     heading: "THE ARRIVAL",
@@ -142,6 +181,49 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
   }
 
   if (isFullscreen) {
+    if (activeOverlay === "hangar") {
+      const slide = SHIP_SLIDES[slideIndex];
+
+      return (
+        <div className="overlay-fullscreen mission-briefing">
+          <button className="close-btn" onClick={closeOverlay}>
+            ✕
+          </button>
+
+          <div className="briefing-container">
+            <div className="hud-frame"></div>
+
+            <div className="briefing-left">
+              <h1 className="briefing-heading">{slide.heading}</h1>
+              <p className="briefing-text">{slide.text}</p>
+            </div>
+
+            <div className="briefing-right">
+              <ShipViewer modelPath={slide.model} />
+            </div>
+          </div>
+
+          <div className="briefing-controls">
+            <button
+              onClick={() => setSlideIndex((prev) => Math.max(prev - 1, 0))}
+              disabled={slideIndex === 0}
+            >
+              BACK
+            </button>
+
+            <button
+              onClick={() =>
+                setSlideIndex((prev) =>
+                  Math.min(prev + 1, SHIP_SLIDES.length - 1),
+                )
+              }
+            >
+              NEXT
+            </button>
+          </div>
+        </div>
+      );
+    }
     if (activeOverlay === "missions") {
       const slide = MISSION_SLIDES[slideIndex];
 
