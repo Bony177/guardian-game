@@ -1,5 +1,5 @@
 import "./overlay.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ShipViewer from "./ShipViewer";
 
 const POPUP_OVERLAYS = ["home", "news", "factions", "community"];
@@ -7,7 +7,7 @@ const FULLSCREEN_OVERLAYS = ["missions", "armory", "hangar"];
 const SHIP_SLIDES = [
   {
     heading: "SCARAB INTERCEPTOR",
-    model: "/models/ship1.glb",
+    model: "/models/fs1.glb",
     text: `CLASS: LIGHT ASSAULT RECON
 ORIGIN: OUTER GRID FABRICATOR
 HEALTH: 100
@@ -19,7 +19,7 @@ Designed for speed and pilot suppression.`,
   },
   {
     heading: "REVENANT CRUISER",
-    model: "/models/ship2.glb",
+    model: "/models/fs2.glb",
     text: `CLASS: TACTICAL SUPPRESSION VESSEL
 ORIGIN: DEEP GRID WAR FOUNDRY
 HEALTH: 300
@@ -31,7 +31,7 @@ and partial shield regeneration.`,
   },
   {
     heading: "OBLIVION DREADCORE",
-    model: "/models/ship3.glb",
+    model: "/models/fs3.glb",
     text: `CLASS: AUTONOMOUS WAR DREADNOUGHT
 ORIGIN: SIGNAL SOURCE PRIME
 HEALTH: 1200
@@ -151,12 +151,17 @@ const OVERLAY_CONTENT = {
 const TAB_ORDER = ["MISSIONS", "ARMORY", "SHIP HANGAR"];
 
 function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  useEffect(() => {
+    setSlideIndex(0);
+  }, [activeOverlay]);
+
   if (!activeOverlay) return null;
 
   // Determine if it's a modal or fullscreen overlay
   const isPopup = POPUP_OVERLAYS.includes(activeOverlay);
   const isFullscreen = FULLSCREEN_OVERLAYS.includes(activeOverlay);
-  const [slideIndex, setSlideIndex] = useState(0);
 
   // Get data from OVERLAY_CONTENT
   const overlayKey = isFullscreen
@@ -313,3 +318,6 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 }
 
 export default Overlay;
+
+
+
