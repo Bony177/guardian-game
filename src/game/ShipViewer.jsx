@@ -39,6 +39,42 @@ function ShipViewer({ modelPath }) {
     rimLight.position.set(-4, 2, -4);
     scene.add(rimLight);
 
+    const backLight = new THREE.PointLight(0x45d9ff, 2.2, 0, 2);
+    backLight.position.set(0, 0, -6);
+    scene.add(backLight);
+
+    const glowCanvas = document.createElement("canvas");
+    glowCanvas.width = 256;
+    glowCanvas.height = 256;
+    const glowCtx = glowCanvas.getContext("2d");
+    if (glowCtx) {
+      const gradient = glowCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
+      gradient.addColorStop(0, "rgba(205,245,255,1)");
+      gradient.addColorStop(0.3, "rgba(120,220,255,0.82)");
+      gradient.addColorStop(0.6, "rgba(35,120,255,0.35)");
+      gradient.addColorStop(1, "rgba(5,20,45,0)");
+      glowCtx.fillStyle = gradient;
+      glowCtx.fillRect(0, 0, 256, 256);
+    }
+
+    const backGlowTexture = new THREE.CanvasTexture(glowCanvas);
+    backGlowTexture.colorSpace = THREE.SRGBColorSpace;
+    const backGlowMaterial = new THREE.SpriteMaterial({
+      map: backGlowTexture,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      opacity: 0.35,
+    });
+    const backGlow = new THREE.Sprite(backGlowMaterial);
+    backGlow.position.set(0, 0, -6.2);
+    backGlow.scale.set(9, 6.6, 1);
+    scene.add(backGlow);
+    const baseBackGlowPos = new THREE.Vector3(0, 0, -6.2);
+    const baseBackGlowScale = new THREE.Vector3(9, 6.6, 1);
+    let baseBackLightIntensity = 2.2;
+    let baseBackGlowOpacity = 0.32;
+
     const resize = () => {
       const width = Math.max(1, mount.clientWidth);
       const height = Math.max(1, mount.clientHeight);
@@ -77,6 +113,16 @@ function ShipViewer({ modelPath }) {
         camera.position.set(maxDim * 0.2, maxDim * 0.08, distance);
         camera.lookAt(0, 0, 0);
         camera.updateProjectionMatrix();
+
+        backLight.position.set(0, maxDim * 0.06, -maxDim * 1.2);
+        baseBackLightIntensity = 1.8 + maxDim * 0.18;
+        backLight.intensity = baseBackLightIntensity;
+
+        baseBackGlowPos.set(0, maxDim * 0.04, -maxDim * 1.15);
+        baseBackGlowScale.set(maxDim * 3.1, maxDim * 2.25, 1);
+        backGlow.position.copy(baseBackGlowPos);
+        backGlow.scale.copy(baseBackGlowScale);
+        baseBackGlowOpacity = 0.28;
       },
       undefined,
       (error) => {
@@ -93,6 +139,21 @@ function ShipViewer({ modelPath }) {
       if (model) {
         model.rotation.y += 0.005;
       }
+
+      const time = performance.now() * 0.001;
+      const glowPulse = 0.74 + Math.sin(time * 2.4) * 0.26;
+      const lightPulse = 0.8 + Math.sin(time * 1.7 + 0.8) * 0.2;
+      const scalePulse = 0.95 + Math.sin(time * 1.9) * 0.07;
+
+      backLight.intensity = baseBackLightIntensity * lightPulse;
+      backGlowMaterial.opacity = baseBackGlowOpacity * glowPulse;
+      backGlow.scale.set(
+        baseBackGlowScale.x * scalePulse,
+        baseBackGlowScale.y * scalePulse,
+        1,
+      );
+      backGlow.position.x = baseBackGlowPos.x + Math.sin(time * 0.75) * 0.04;
+      backGlow.position.y = baseBackGlowPos.y + Math.cos(time * 1.05) * 0.03;
 
       renderer.render(scene, camera);
     };
@@ -115,6 +176,8 @@ function ShipViewer({ modelPath }) {
         });
       }
 
+      backGlowTexture.dispose();
+      backGlowMaterial.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) {
         mount.removeChild(renderer.domElement);
