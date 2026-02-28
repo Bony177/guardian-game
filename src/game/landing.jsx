@@ -218,17 +218,35 @@ function Landing({
       </div>
 
       <div className="bottom-panels">
-        <div className="card" onClick={() => setActiveOverlay("missions")}>
-          MISSIONS
-        </div>
+        <button
+          type="button"
+          className="panel-btn"
+          onClick={() => setActiveOverlay("map")}
+          aria-label="Open map overlay"
+        >
+          <img className="panel-btn-image" src="/textures/MAPNG.png" alt="" />
+          <span className="panel-btn-label">MAP</span>
+        </button>
 
-        <div className="card" onClick={() => setActiveOverlay("armory")}>
-          ARMORY
-        </div>
+        <button
+          type="button"
+          className="panel-btn"
+          onClick={() => setActiveOverlay("armory")}
+          aria-label="Open armory overlay"
+        >
+          <img className="panel-btn-image" src="/textures/GUNPNG.png" alt="" />
+          <span className="panel-btn-label">ARMORY</span>
+        </button>
 
-        <div className="card" onClick={() => setActiveOverlay("hangar")}>
-          SHIP HANGAR
-        </div>
+        <button
+          type="button"
+          className="panel-btn"
+          onClick={() => setActiveOverlay("hangar")}
+          aria-label="Open ship hangar overlay"
+        >
+          <img className="panel-btn-image" src="/textures/SHIPNG.png" alt="" />
+          <span className="panel-btn-label">SHIP HANGAR</span>
+        </button>
       </div>
     </div>
   );

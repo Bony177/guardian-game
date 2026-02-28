@@ -1,9 +1,36 @@
-import "./overlay.css";
+﻿import "./overlay.css";
 import { useEffect, useState } from "react";
 import ShipViewer from "./ShipViewer";
+import ArmoryViewer from "./ArmoryViewer";
 
 const POPUP_OVERLAYS = ["home", "news", "factions", "community"];
 const FULLSCREEN_OVERLAYS = ["missions", "armory", "hangar"];
+const MAP_SLIDE = {
+  heading: "SECTOR ECLIPSE-7",
+  text: `Containment & Research Zone
+Designation: 07 / 789 Outer Sectors
+
+Hybrid defense complex built into terrain.
+Core Vault Lab secured by shield perimeter.
+
+Three defense towers in triangular formation.
+Southern ridges provide elevation advantage.
+Western trenches vulnerable to breach.
+Enemy posts detected beyond ridge line.
+`,
+  image: "/textures/MAPS.jpg",
+};
+const ARMORY_SLIDE = {
+  heading: "DEFENSE CANNON MK-IV",
+  text: `Power Output: 4.2 MW
+Weapon: Dual Plasma Rail Cannons
+Range: 1.8 km
+Fire Rate: 620 RPM
+Target Lock: x3
+Armor: Reactive Composite
+Cooling: Cryo-Loop System
+Response Time: 0.18 sec`,
+};
 const SHIP_SLIDES = [
   {
     heading: "SCARAB INTERCEPTOR",
@@ -84,7 +111,7 @@ We prepared for the worst.`,
 A global Signal Jammer masks every emission.
 No radio. No heat signatures. No trace.
 
-As long as we remain silent…
+As long as we remain silentâ€¦
 they cannot find us.`,
     image: "/textures/slide4.png",
   },
@@ -93,11 +120,11 @@ they cannot find us.`,
     text: `But silence is fragile.
 
 Power shifts. Systems falter.
-For a few minutes — a signal escapes.
+For a few minutes â€” a signal escapes.
 
 A Signal Breach.
 
-And when it happens…
+And when it happensâ€¦
 they respond.`,
     image: "/textures/slide5.png",
   },
@@ -112,7 +139,7 @@ Hold the line.
 Protect the settlement.
 Restore the silence.
 
-If the tower falls —
+If the tower falls â€”
 another piece of Earth is harvested.`,
     image: "/textures/slide6.png",
   },
@@ -174,7 +201,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
       <div className="overlay-popup">
         <div className="overlay-modal">
           <button className="close-btn" onClick={closeOverlay}>
-            ✕
+            X
           </button>
           <div className="overlay-content">
             <h2>{data.title}</h2>
@@ -185,14 +212,61 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
     );
   }
 
+  if (activeOverlay === "map") {
+    return (
+      <div className="overlay-fullscreen mission-briefing">
+        <button className="close-btn" onClick={closeOverlay}>
+          X
+        </button>
+
+        <div className="briefing-container">
+          <div className="hud-frame"></div>
+          <div className="briefing-left">
+            <h1 className="briefing-heading">{MAP_SLIDE.heading}</h1>
+            <p className="briefing-text">{MAP_SLIDE.text}</p>
+          </div>
+
+          <div className="briefing-right briefing-right-map">
+            <div className="map-wrapper">
+              <img src={MAP_SLIDE.image} alt="Tactical Map" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isFullscreen) {
+    if (activeOverlay === "armory") {
+      return (
+        <div className="overlay-fullscreen mission-briefing">
+          <button className="close-btn" onClick={closeOverlay}>
+            X
+          </button>
+
+          <div className="briefing-container">
+            <div className="hud-frame"></div>
+
+            <div className="briefing-left">
+              <h1 className="briefing-heading">{ARMORY_SLIDE.heading}</h1>
+              <p className="briefing-text">{ARMORY_SLIDE.text}</p>
+            </div>
+
+            <div className="briefing-right">
+              <ArmoryViewer />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (activeOverlay === "hangar") {
       const slide = SHIP_SLIDES[slideIndex];
 
       return (
         <div className="overlay-fullscreen mission-briefing">
           <button className="close-btn" onClick={closeOverlay}>
-            ✕
+            X
           </button>
 
           <div className="briefing-container">
@@ -235,7 +309,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
       return (
         <div className="overlay-fullscreen mission-briefing">
           <button className="close-btn" onClick={closeOverlay}>
-            ✕
+            X
           </button>
 
           <div className="briefing-container">
@@ -278,7 +352,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
     return (
       <div className="overlay-fullscreen">
         <button className="close-btn" onClick={closeOverlay}>
-          ✕
+          X
         </button>
 
         <div className="overlay-content-fullscreen">
@@ -290,14 +364,14 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
           className="arrow arrow-left"
           onClick={() => handleTabChange("prev")}
         >
-          ◀
+          â—€
         </button>
 
         <button
           className="arrow arrow-right"
           onClick={() => handleTabChange("next")}
         >
-          ▶
+          â–¶
         </button>
 
         <div className="overlay-tabs">
@@ -318,6 +392,3 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 }
 
 export default Overlay;
-
-
-

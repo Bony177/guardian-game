@@ -328,10 +328,71 @@
   50%       { filter: brightness(0.95) contrast(1.05); }
 }
 
+@keyframes radarRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 
 /* Keep your hover zoom */
 .briefing-right:hover img {
   filter: brightness(0.92) contrast(1.12);
+}
+
+/* Keep tactical map panel static */
+.briefing-right-map::before {
+  inset: -28%;
+  background: radial-gradient(
+    circle at 50% 52%,
+    rgba(88, 255, 154, 0.55) 0%,
+    rgba(45, 210, 106, 0.34) 30%,
+    rgba(19, 120, 58, 0.16) 52%,
+    rgba(3, 22, 9, 0) 72%
+  );
+  filter: blur(20px);
+  animation: none;
+  z-index: 1;
+}
+
+.briefing-right-map .map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.briefing-right-map .map-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(0, 255, 150, 0.24) 0deg,
+    rgba(0, 255, 150, 0.15) 80deg,
+    rgba(0, 255, 150, 0) 150deg,
+    rgba(0, 255, 150, 0) 360deg
+  );
+  transform-origin: 50% 50%;
+  animation: radarRotate 6s linear infinite;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.briefing-right-map .map-wrapper img {
+  position: relative;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: none;
+  transform: none;
+  will-change: auto;
+  filter: brightness(0.9) contrast(1.08);
+}
+
+.briefing-right-map:hover .map-wrapper img {
+  filter: brightness(0.9) contrast(1.08);
 }
 
 /* ============================= */
