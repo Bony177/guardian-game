@@ -166,6 +166,29 @@ body {
   display: block;
 }
 
+.sky-lightning-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 55vh;
+  z-index: 9;
+  pointer-events: none;
+  overflow: hidden;
+  mix-blend-mode: screen;
+}
+
+.sky-lightning-layer canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  opacity: 0.55;
+  filter:
+    drop-shadow(0 0 12px rgba(245, 252, 255, 0.95))
+    drop-shadow(0 0 28px rgba(220, 238, 255, 0.72))
+    drop-shadow(0 0 48px rgba(170, 205, 255, 0.42));
+}
+
 /* ===============================
    BOTTOM PANELS (UI Layer)
 ================================= */

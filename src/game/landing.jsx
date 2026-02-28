@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import Sandbox from "./stars";
+import SkyLightning from "./SkyLightning";
 
 function Landing({
   activeOverlay,
@@ -174,6 +175,9 @@ function Landing({
       <div className="stars-layer">
         <Sandbox />
       </div>
+      <div className="sky-lightning-layer">
+        <SkyLightning />
+      </div>
       <div className="embers-strip">
         <img src="/textures/sparklee.png" />
       </div>
@@ -253,3 +257,4 @@ function Landing({
 }
 
 export default Landing;
+

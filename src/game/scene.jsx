@@ -222,6 +222,7 @@ function Scene() {
     let lastRadarCount = -1;
     let lastShieldPercent = -1;
     const activeExplosions = [];
+    const activeFireTraces = [];
 
     let scene = null;
     let camera = null;
@@ -350,6 +351,117 @@ function Scene() {
       }
     }
 
+    function createBarrelFireTrace(startWorld, endWorld) {
+      if (!scene) return;
+
+      const direction = new THREE.Vector3().subVectors(endWorld, startWorld);
+      const length = direction.length();
+      if (length <= 0.001) return;
+
+      const traceGroup = new THREE.Group();
+
+      const glowGeometry = new THREE.CylinderGeometry(0.12, 0.12, length, 10);
+      const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xff7a00,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+      glowMesh.renderOrder = 75;
+      traceGroup.add(glowMesh);
+
+      const coreGeometry = new THREE.CylinderGeometry(0.05, 0.05, length, 10);
+      const coreMaterial = new THREE.MeshBasicMaterial({
+        color: 0xfff6df,
+        transparent: true,
+        opacity: 1,
+        depthWrite: false,
+      });
+      const coreMesh = new THREE.Mesh(coreGeometry, coreMaterial);
+      coreMesh.renderOrder = 76;
+      traceGroup.add(coreMesh);
+
+      traceGroup.position.copy(startWorld).add(endWorld).multiplyScalar(0.5);
+      traceGroup.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        direction.normalize(),
+      );
+
+      scene.add(traceGroup);
+
+      activeFireTraces.push({
+        group: traceGroup,
+        glowGeometry,
+        coreGeometry,
+        glowMaterial,
+        coreMaterial,
+        elapsed: 0,
+        lifetime: 0.12,
+      });
+    }
+
+    function createBarrelFireTracesToTarget(hitPoint) {
+      if (!gunBarrel) return;
+
+      gunBarrel.updateWorldMatrix(true, false);
+
+      const muzzlePositions =
+        barrelExpControls.positions?.length > 0
+          ? barrelExpControls.positions
+          : BARREL_EXP_DEFAULTS.positions;
+
+      const muzzles = muzzlePositions.slice(0, 2);
+
+      if (!muzzles.length) {
+        const fallbackStart = gunBarrel.getWorldPosition(new THREE.Vector3());
+        createBarrelFireTrace(fallbackStart, hitPoint);
+        return;
+      }
+
+      for (const muzzle of muzzles) {
+        const localMuzzle = new THREE.Vector3(muzzle.x, muzzle.y, muzzle.z);
+        const worldMuzzle = gunBarrel.localToWorld(localMuzzle);
+        createBarrelFireTrace(worldMuzzle, hitPoint);
+      }
+    }
+
+    function updateBarrelFireTraces(deltaSeconds) {
+      if (!activeFireTraces.length) return;
+
+      for (let i = activeFireTraces.length - 1; i >= 0; i -= 1) {
+        const trace = activeFireTraces[i];
+        trace.elapsed += deltaSeconds;
+
+        const t = THREE.MathUtils.clamp(trace.elapsed / trace.lifetime, 0, 1);
+        const fade = 1 - t;
+
+        trace.coreMaterial.opacity = fade;
+        trace.glowMaterial.opacity = 0.5 * fade;
+
+        if (t >= 1) {
+          if (trace.group.parent) trace.group.parent.remove(trace.group);
+          trace.glowGeometry.dispose();
+          trace.coreGeometry.dispose();
+          trace.glowMaterial.dispose();
+          trace.coreMaterial.dispose();
+          activeFireTraces.splice(i, 1);
+        }
+      }
+    }
+
+    function clearBarrelFireTraces() {
+      for (const trace of activeFireTraces) {
+        if (trace.group?.parent) trace.group.parent.remove(trace.group);
+        trace.glowGeometry?.dispose?.();
+        trace.coreGeometry?.dispose?.();
+        trace.glowMaterial?.dispose?.();
+        trace.coreMaterial?.dispose?.();
+      }
+      activeFireTraces.length = 0;
+    }
+
     function registerVaultGlowPulseTargets(material) {
       if (!material) return;
       const materials = Array.isArray(material) ? material : [material];
@@ -380,15 +492,18 @@ function Scene() {
 
       const shipMeshes = getShipMeshes();
       const intersects = raycaster.intersectObjects(shipMeshes, true);
+
       if (intersects.length > 0) {
         const hitObject = intersects[0].object;
+        const hitPoint = intersects[0].point.clone();
+
+        if (gunBarrel) {
+          createBarrelFireTracesToTarget(hitPoint);
+        }
 
         damageShip(hitObject);
 
-        const worldPos = new THREE.Vector3();
-        hitObject.getWorldPosition(worldPos);
-
-        const explosion = createSpriteExplosion(scene, worldPos);
+        const explosion = createSpriteExplosion(scene, hitPoint);
         activeExplosions.push(explosion);
       }
 
@@ -1396,6 +1511,7 @@ function Scene() {
         }
       }
       updateBarrelExp(deltaSeconds);
+      updateBarrelFireTraces(deltaSeconds);
 
       if (vaultGlowPulseTargets.length > 0) {
         const elapsed = clock.getElapsedTime();
@@ -1504,6 +1620,7 @@ function Scene() {
       if (barrelExpTexture) {
         barrelExpTexture.dispose();
       }
+      clearBarrelFireTraces();
       if (skyBackdrop) {
         scene.remove(skyBackdrop);
         disposeObject3D(skyBackdrop);
