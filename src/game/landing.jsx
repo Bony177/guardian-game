@@ -175,7 +175,7 @@ function Landing({
         <Sandbox />
       </div>
       <div className="embers-strip">
-        <img src="/textures/firesparkle.png" />
+        <img src="/textures/sparklee.png" />
       </div>
       <img src="/textures/newterrani.png" className="terrain" />
       <div className="mountain-smoke">

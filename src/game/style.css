@@ -452,7 +452,7 @@ body {
 
 .embers-strip img {
   width: 140%;
-  opacity: 0.7;           /* stay between 0.4 – 0.6 */
+  opacity: 0.9;           /* stay between 0.4 – 0.6 */
   mix-blend-mode: screen;
 
   animation: drift 28s linear infinite,
