@@ -511,6 +511,7 @@
 
   /* Optional glow boost */
   filter: drop-shadow(0 0 20px rgba(0, 200, 255, 0.6));
+  mix-blend-mode: screen;
 }
 
 .ship-viewer {
