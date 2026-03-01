@@ -21,6 +21,99 @@ body {
   z-index: 10; /* UI base layer */
 }
 
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(29, 65, 104, 0.28), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(255, 116, 0, 0.15), transparent 40%),
+    rgba(2, 8, 18, 0.94);
+}
+
+.loading-screen__panel {
+  width: min(88vw, 460px);
+  padding: 28px 26px 24px;
+  border: 1px solid rgba(122, 210, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(2, 16, 31, 0.9);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.55),
+    0 0 28px rgba(45, 152, 255, 0.28);
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.loading-screen__label {
+  margin: 0;
+  font-family: 'Zen Dots';
+  font-size: clamp(13px, 1.7vw, 16px);
+  letter-spacing: 1.8px;
+  color: #cbefff;
+}
+
+.loading-screen__percent {
+  margin: 14px 0 16px;
+  font-family: 'Zen Dots';
+  font-size: clamp(28px, 4.8vw, 42px);
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(66, 188, 255, 0.6);
+}
+
+.loading-screen__bar {
+  height: 12px;
+  width: 100%;
+  border: 1px solid rgba(157, 226, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(7, 22, 38, 0.95);
+  overflow: hidden;
+}
+
+.loading-screen__fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #6fc6ff 0%, #2d9cff 60%, #ff8f2a 100%);
+  box-shadow:
+    0 0 14px rgba(37, 165, 255, 0.7),
+    0 0 24px rgba(255, 142, 42, 0.4);
+  transition: width 0.2s ease;
+}
+
+.loading-screen__hint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.7px;
+  color: rgba(214, 239, 255, 0.76);
+}
+
+.loading-screen__enter-btn {
+  margin-top: 18px;
+  min-width: 160px;
+  padding: 11px 26px;
+  border: 1px solid rgba(158, 227, 255, 0.9);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(11, 52, 87, 0.96), rgba(5, 24, 44, 0.96));
+  color: #eaf8ff;
+  font-family: 'Zen Dots';
+  font-size: 15px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  box-shadow:
+    0 0 16px rgba(61, 183, 255, 0.4),
+    inset 0 0 8px rgba(79, 206, 255, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.loading-screen__enter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 28px rgba(74, 203, 255, 0.64),
+    0 0 42px rgba(255, 146, 48, 0.36),
+    inset 0 0 10px rgba(149, 228, 255, 0.45);
+}
+
 
 /* ===============================
    BACKGROUND IMAGE LAYER

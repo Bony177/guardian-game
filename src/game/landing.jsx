@@ -16,8 +16,93 @@ function Landing({
   handleTabChange,
 }) {
   const mountRef = useRef(null);
+  const barrelAudioRef = useRef(null);
+  const bgmAudioRef = useRef(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [assetsReady, setAssetsReady] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
+  const [audioError, setAudioError] = useState("");
 
   useEffect(() => {
+    const barrelAudio = new Audio("/audio/gunbarrel.m4a");
+    barrelAudio.preload = "auto";
+    barrelAudio.volume = 0.7;
+    barrelAudio.loop = false;
+    barrelAudio.load();
+
+    const bgmAudio = new Audio("/audio/ribhavagrawal-the-beginning.mp3");
+    bgmAudio.preload = "auto";
+    bgmAudio.loop = true;
+    bgmAudio.volume = 0.4;
+    bgmAudio.load();
+
+    barrelAudioRef.current = barrelAudio;
+    bgmAudioRef.current = bgmAudio;
+
+    return () => {
+      [barrelAudio, bgmAudio].forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+      barrelAudioRef.current = null;
+      bgmAudioRef.current = null;
+    };
+  }, []);
+
+  const playAudioFromGesture = (audio, label) => {
+    if (!audio) return Promise.resolve(false);
+
+    audio.muted = false;
+    audio.currentTime = 0;
+
+    try {
+      const playResult = audio.play();
+      if (playResult && typeof playResult.then === "function") {
+        return playResult
+          .then(() => true)
+          .catch((error) => {
+            console.warn(`Unable to play ${label} audio`, error);
+            return false;
+          });
+      }
+
+      return Promise.resolve(!audio.paused);
+    } catch (error) {
+      console.warn(`Unable to play ${label} audio`, error);
+      return Promise.resolve(false);
+    }
+  };
+
+  const handleEnter = async () => {
+    if (!assetsReady || hasEntered) return;
+
+    setAudioError("");
+    const barrelAudio = barrelAudioRef.current;
+    const bgmAudio = bgmAudioRef.current;
+    const [barrelStarted, bgmStarted] = await Promise.all([
+      playAudioFromGesture(barrelAudio, "barrel"),
+      playAudioFromGesture(bgmAudio, "bgm"),
+    ]);
+
+    if (barrelStarted && bgmStarted) {
+      setHasEntered(true);
+      return;
+    }
+
+    if (barrelAudio) {
+      barrelAudio.pause();
+      barrelAudio.currentTime = 0;
+    }
+    if (bgmAudio) {
+      bgmAudio.pause();
+      bgmAudio.currentTime = 0;
+    }
+    setAudioError("Audio blocked. Tap ENTER again to allow sound.");
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const mountNode = mountRef.current;
     const scene = new THREE.Scene();
     scene.background = null; // Transparent background
     scene.fog = null; // No fog to hide background
@@ -53,8 +138,8 @@ function Landing({
     renderer.domElement.style.zIndex = "2";
     renderer.domElement.style.pointerEvents = "none";
 
-    if (mountRef.current) {
-      mountRef.current.appendChild(renderer.domElement);
+    if (mountNode) {
+      mountNode.appendChild(renderer.domElement);
     }
 
     // Main directional key light
@@ -75,8 +160,27 @@ function Landing({
     scene.add(turretPoint);
 
     let animationId;
-    const loader = new GLTFLoader();
-    const emissiveTexture = new THREE.TextureLoader().load(
+    const loadingManager = new THREE.LoadingManager();
+
+    loadingManager.onStart = () => {
+      if (!isMounted) return;
+      setLoadingProgress(0);
+      setAssetsReady(false);
+    };
+    loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
+      if (!isMounted || itemsTotal <= 0) return;
+      const nextProgress = Math.round((itemsLoaded / itemsTotal) * 100);
+      setLoadingProgress(Math.min(nextProgress, 99));
+    };
+    loadingManager.onLoad = () => {
+      if (!isMounted) return;
+      setLoadingProgress(100);
+      setAssetsReady(true);
+    };
+
+    const loader = new GLTFLoader(loadingManager);
+    const textureLoader = new THREE.TextureLoader(loadingManager);
+    const emissiveTexture = textureLoader.load(
       "/textures/gunemap.jpg",
     );
     emissiveTexture.flipY = false;
@@ -157,9 +261,11 @@ function Landing({
     animate();
 
     return () => {
+      isMounted = false;
       cancelAnimationFrame(animationId);
+      emissiveTexture.dispose();
       renderer.dispose();
-      if (mountRef.current && renderer.domElement.parentNode) {
+      if (mountNode && renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
     };
@@ -167,6 +273,31 @@ function Landing({
 
   return (
     <div className="landing">
+      {!hasEntered && (
+        <div className="loading-screen" role="dialog" aria-modal="true">
+          <div className="loading-screen__panel">
+            <p className="loading-screen__label">
+              {assetsReady ? "SYSTEM READY" : "LOADING 3D ASSETS"}
+            </p>
+            <p className="loading-screen__percent">{loadingProgress}%</p>
+            <div className="loading-screen__bar">
+              <div
+                className="loading-screen__fill"
+                style={{ width: `${loadingProgress}%` }}
+              />
+            </div>
+            {assetsReady ? (
+              <button className="loading-screen__enter-btn" onClick={handleEnter}>
+                ENTER
+              </button>
+            ) : (
+              <p className="loading-screen__hint">Preparing landing models...</p>
+            )}
+            {audioError ? <p className="loading-screen__hint">{audioError}</p> : null}
+          </div>
+        </div>
+      )}
+
       {/* Three.js canvas */}
       <div ref={mountRef} className="three-canvas" />
 
