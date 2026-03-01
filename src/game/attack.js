@@ -11,6 +11,51 @@ const ELECTRIC_BEAM = {
   spikeBoost: 1.85,
 };
 
+const LASER_SFX_PATH = "/audio/lazer.m4a";
+const LASER_SFX_COOLDOWN_MS = 90;
+
+let laserSfxBase = null;
+let lastLaserSfxAt = 0;
+
+function getLaserSfxBase() {
+  if (laserSfxBase || typeof Audio === "undefined") return laserSfxBase;
+
+  const audio = new Audio(LASER_SFX_PATH);
+  audio.preload = "auto";
+  audio.volume = 0.72;
+  audio.load();
+  laserSfxBase = audio;
+  return laserSfxBase;
+}
+
+function playLaserSfx() {
+  const now =
+    typeof performance !== "undefined" && typeof performance.now === "function"
+      ? performance.now()
+      : Date.now();
+
+  if (now - lastLaserSfxAt < LASER_SFX_COOLDOWN_MS) return;
+  lastLaserSfxAt = now;
+
+  const base = getLaserSfxBase();
+  if (!base) return;
+
+  let instance = base;
+  try {
+    instance = base.cloneNode(true);
+  } catch {
+    instance = base;
+  }
+
+  instance.currentTime = 0;
+  const playResult = instance.play();
+  if (playResult && typeof playResult.catch === "function") {
+    playResult.catch((error) => {
+      console.warn("Unable to play laser beam audio", error);
+    });
+  }
+}
+
 // ================= INIT =================
 
 export function initAttackState(ship) {
@@ -146,6 +191,7 @@ function createBeam(ship, shield) {
 
   ship.beam = beam;
   ship.beamFxTime = 0;
+  playLaserSfx();
 }
 
 function attachElectricOverlay(beam, length) {
