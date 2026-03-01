@@ -269,6 +269,8 @@ function Scene() {
       columns: 4,
       rows: 4,
     };
+    const activeGunfireAudios = [];
+    let gunfireAudioBase = null;
     const barrelExpControls = {
       positions: BARREL_EXP_DEFAULTS.positions.map((position) => ({
         ...position,
@@ -292,6 +294,48 @@ function Scene() {
         applyBarrelExpTransforms();
       },
     };
+
+    function initGunfireAudio() {
+      if (typeof Audio === "undefined") return;
+      gunfireAudioBase = new Audio("/audio/gunfire.m4a");
+      gunfireAudioBase.preload = "auto";
+      gunfireAudioBase.volume = 0.74;
+      gunfireAudioBase.load();
+    }
+
+    function playGunfireAudio() {
+      if (!gunfireAudioBase) return;
+
+      let shotAudio = gunfireAudioBase;
+      try {
+        shotAudio = gunfireAudioBase.cloneNode(true);
+        shotAudio.volume = gunfireAudioBase.volume;
+      } catch {
+        shotAudio = gunfireAudioBase;
+      }
+
+      const releaseAudio = () => {
+        const index = activeGunfireAudios.indexOf(shotAudio);
+        if (index !== -1) activeGunfireAudios.splice(index, 1);
+        shotAudio.removeEventListener("ended", releaseAudio);
+        shotAudio.removeEventListener("error", releaseAudio);
+      };
+
+      shotAudio.currentTime = 0;
+      shotAudio.addEventListener("ended", releaseAudio);
+      shotAudio.addEventListener("error", releaseAudio);
+      activeGunfireAudios.push(shotAudio);
+
+      const playResult = shotAudio.play();
+      if (playResult && typeof playResult.catch === "function") {
+        playResult.catch((error) => {
+          console.warn("Unable to play gunfire audio", error);
+          releaseAudio();
+        });
+      }
+    }
+
+    initGunfireAudio();
 
     function applyBarrelExpTransforms() {
       if (!barrelExpSprites.length) return;
@@ -485,6 +529,7 @@ function Scene() {
 
       recoilOffset = 0.2;
       isRecoiling = true;
+      playGunfireAudio();
 
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -1619,6 +1664,16 @@ function Scene() {
       }
       if (barrelExpTexture) {
         barrelExpTexture.dispose();
+      }
+      for (const audio of activeGunfireAudios) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      activeGunfireAudios.length = 0;
+      if (gunfireAudioBase) {
+        gunfireAudioBase.pause();
+        gunfireAudioBase.currentTime = 0;
+        gunfireAudioBase = null;
       }
       clearBarrelFireTraces();
       if (skyBackdrop) {
