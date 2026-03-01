@@ -18,12 +18,24 @@ function Landing({
   const mountRef = useRef(null);
   const barrelAudioRef = useRef(null);
   const bgmAudioRef = useRef(null);
+  const hoverAudioRef = useRef(null);
+  const clickAudioRef = useRef(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [assetsReady, setAssetsReady] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
     const barrelAudio = new Audio("/audio/gunbarrel.m4a");
+    const hoverAudio = new Audio("/audio/buttonhover.mp3");
+    hoverAudio.preload = "auto";
+    hoverAudio.volume = 0.8;
+
+    const clickAudio = new Audio("/audio/buttonclick.mp3");
+    clickAudio.preload = "auto";
+    clickAudio.volume = 0.8;
+
+    hoverAudioRef.current = hoverAudio;
+    clickAudioRef.current = clickAudio;
     barrelAudio.preload = "auto";
     barrelAudio.volume = 0.05;
     barrelAudio.loop = true;
@@ -37,12 +49,14 @@ function Landing({
     bgmAudioRef.current = bgmAudio;
 
     return () => {
-      [barrelAudio, bgmAudio].forEach((audio) => {
+      [barrelAudio, bgmAudio, hoverAudio, clickAudio].forEach((audio) => {
         audio.pause();
         audio.currentTime = 0;
       });
       barrelAudioRef.current = null;
       bgmAudioRef.current = null;
+      hoverAudioRef.current = null;
+      clickAudioRef.current = null;
     };
   }, []);
 
@@ -70,6 +84,25 @@ function Landing({
     } catch (error) {
       console.warn("Unable to play bgm audio", error);
     }
+  };
+  const playHoverSound = () => {
+    const audio = hoverAudioRef.current;
+    if (!audio) return;
+
+    try {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
+  };
+
+  const playClickSound = () => {
+    const audio = clickAudioRef.current;
+    if (!audio) return;
+
+    try {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
   };
 
   useEffect(() => {
@@ -259,7 +292,11 @@ function Landing({
             {assetsReady ? (
               <button
                 className="loading-screen__enter-btn"
-                onClick={handleEnter}
+                onMouseEnter={playHoverSound}
+                onClick={() => {
+                  playClickSound();
+                  handleEnter();
+                }}
               >
                 ENTER
               </button>
@@ -315,12 +352,23 @@ function Landing({
         <div className="hero-buttons">
           <button
             className="primary-btn"
-            onClick={() => setActiveOverlay("missions")}
+            onMouseEnter={playHoverSound}
+            onClick={() => {
+              playClickSound();
+              setActiveOverlay("missions");
+            }}
           >
             START MISSION
           </button>
 
-          <button className="secondary-btn" onClick={startGame}>
+          <button
+            className="secondary-btn"
+            onMouseEnter={playHoverSound}
+            onClick={() => {
+              playClickSound();
+              startGame();
+            }}
+          >
             QUICK PLAY
           </button>
         </div>
@@ -330,8 +378,11 @@ function Landing({
         <button
           type="button"
           className="panel-btn"
-          onClick={() => setActiveOverlay("map")}
-          aria-label="Open map overlay"
+          onMouseEnter={playHoverSound}
+          onClick={() => {
+            playClickSound();
+            setActiveOverlay("map");
+          }}
         >
           <img className="panel-btn-image" src="/textures/MAPNG.png" alt="" />
           <span className="panel-btn-label">MAP</span>
@@ -340,8 +391,11 @@ function Landing({
         <button
           type="button"
           className="panel-btn"
-          onClick={() => setActiveOverlay("armory")}
-          aria-label="Open armory overlay"
+          onMouseEnter={playHoverSound}
+          onClick={() => {
+            playClickSound();
+            setActiveOverlay("armory");
+          }}
         >
           <img className="panel-btn-image" src="/textures/GUNPNG.png" alt="" />
           <span className="panel-btn-label">ARMORY</span>
@@ -350,8 +404,11 @@ function Landing({
         <button
           type="button"
           className="panel-btn"
-          onClick={() => setActiveOverlay("hangar")}
-          aria-label="Open ship hangar overlay"
+          onMouseEnter={playHoverSound}
+          onClick={() => {
+            playClickSound();
+            setActiveOverlay("hangar");
+          }}
         >
           <img className="panel-btn-image" src="/textures/SHIPNG.png" alt="" />
           <span className="panel-btn-label">SHIP HANGAR</span>
