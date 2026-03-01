@@ -219,6 +219,11 @@ function Scene() {
 
     let disposed = false;
     let rafId = null;
+    // 🎵 Background Music
+    let bgMusic = null;
+    let bgMusicStarted = false;
+    let shieldBreakAudio = null;
+    let shieldBreakPlayed = false; // prevent multiple plays
     let lastRadarCount = -1;
     let lastShieldPercent = -1;
     const activeExplosions = [];
@@ -336,6 +341,28 @@ function Scene() {
     }
 
     initGunfireAudio();
+    function initBackgroundMusic() {
+      if (typeof Audio === "undefined") return;
+
+      bgMusic = new Audio("/audio/waveloom-no-copyright-metal-background.mp3"); // <-- put your song file here
+      bgMusic.loop = true;
+      bgMusic.volume = 0.5; // adjust volume
+      bgMusic.preload = "auto";
+      bgMusic.load();
+    }
+
+    initBackgroundMusic();
+
+    function initShieldBreakAudio() {
+      if (typeof Audio === "undefined") return;
+
+      shieldBreakAudio = new Audio("/audio/shieldlol.mp3");
+      shieldBreakAudio.preload = "auto";
+      shieldBreakAudio.volume = 0.8;
+      shieldBreakAudio.load();
+    }
+
+    initShieldBreakAudio();
 
     function applyBarrelExpTransforms() {
       if (!barrelExpSprites.length) return;
@@ -1502,6 +1529,19 @@ function Scene() {
       const deltaSeconds = deltaMs / 1000;
 
       updateShips(camera, scene, deltaMs, shield, shipSessionId);
+      // 🎵 Start music when first ship appears
+      if (!bgMusicStarted && getActiveShipCount() > 0) {
+        bgMusicStarted = true;
+
+        if (bgMusic) {
+          const playPromise = bgMusic.play();
+          if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch((err) => {
+              console.warn("Autoplay blocked until user interaction", err);
+            });
+          }
+        }
+      }
       // 🎥 Camera shake when shield destroyed
       if (shield.isDestroyed && shield.destroyTimer < 1.3) {
         const shakeAmount = 0.15 * (1 - shield.destroyTimer / 1.3);
@@ -1510,6 +1550,23 @@ function Scene() {
       }
 
       shield.update(deltaSeconds);
+      // 🔊 Play shield break sound ONCE
+      if (shield.isDestroyed && !shieldBreakPlayed) {
+        shieldBreakPlayed = true;
+
+        if (shieldBreakAudio) {
+          shieldBreakAudio.currentTime = 0;
+          const playPromise = shieldBreakAudio.play();
+          if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch((err) => {
+              console.warn("Shield break audio blocked", err);
+            });
+          }
+        }
+      }
+      if (!shield.isDestroyed) {
+        shieldBreakPlayed = false;
+      }
       updateShieldRingPosition();
       updateShieldRingVisualState();
       chimneySmokes.forEach((smokeFx) => smokeFx.update());
@@ -1670,6 +1727,18 @@ function Scene() {
         audio.currentTime = 0;
       }
       activeGunfireAudios.length = 0;
+      // Stop background music
+      if (bgMusic) {
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+        bgMusic = null;
+      }
+      // Stop shield break audio
+      if (shieldBreakAudio) {
+        shieldBreakAudio.pause();
+        shieldBreakAudio.currentTime = 0;
+        shieldBreakAudio = null;
+      }
       if (gunfireAudioBase) {
         gunfireAudioBase.pause();
         gunfireAudioBase.currentTime = 0;

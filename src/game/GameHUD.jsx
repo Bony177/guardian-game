@@ -1,4 +1,49 @@
-function GameHUD() {
+import { useEffect, useRef } from "react";
+
+function GameHUD({ score }) {
+  const coinAudioRef = useRef(null);
+  const previousScoreRef = useRef(score);
+
+  useEffect(() => {
+    const audio = new Audio("/audio/coin.mp3");
+    audio.preload = "auto";
+    audio.volume = 1.0;
+
+    // 🔓 Unlock audio on first interaction
+    const unlockAudio = () => {
+      audio
+        .play()
+        .then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        })
+        .catch(() => {});
+
+      window.removeEventListener("dblclick", unlockAudio);
+    };
+
+    window.addEventListener("dblclick", unlockAudio);
+
+    coinAudioRef.current = audio;
+
+    return () => {
+      window.removeEventListener("dblclick", unlockAudio);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (score > previousScoreRef.current) {
+      if (coinAudioRef.current) {
+        coinAudioRef.current.currentTime = 0;
+        coinAudioRef.current.play().catch((err) => {
+          console.warn("Coin blocked:", err);
+        });
+      }
+    }
+
+    previousScoreRef.current = score;
+  }, [score]);
+
   return (
     <>
       <div className="top-hud">
@@ -6,9 +51,9 @@ function GameHUD() {
           <div className="vault-health">
             VAULT HEALTH
             <div className="vault-bar">
-              <div className="vault-fill power-fill-green" id="powerFill"></div>
+              <div className="vault-fill power-fill-green"></div>
             </div>
-            <span id="vaultHealthValue">78%</span>
+            <span>78%</span>
           </div>
         </div>
 
@@ -17,37 +62,10 @@ function GameHUD() {
         <div className="hud-box score-box">
           <div className="score-panel">
             SCORE
-            <span id="scoreValue">0</span>
+            <span>{score}</span>
           </div>
         </div>
       </div>
-
-      <div className="radar-panel">
-        <div className="radar-header">
-          <div className="title">THREAT SCAN</div>
-          <div className="enemy-count">
-            ENEMIES : <span id="enemyNumber">08</span>
-          </div>
-        </div>
-
-        <div className="shield-status">
-          <span className="shield-label">SHIELD</span>
-          <div className="shield-track">
-            <div className="shield-fill" id="shieldHealthFill"></div>
-          </div>
-          <span className="shield-value" id="shieldHealthValue">
-            100%
-          </span>
-        </div>
-
-        <div className="radar-body">
-          <div className="grid"></div>
-          <div className="scan-line"></div>
-          <div className="dots" id="dots"></div>
-        </div>
-      </div>
-
-      <div className="film-grain"></div>
     </>
   );
 }
