@@ -21,20 +21,17 @@ function Landing({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [assetsReady, setAssetsReady] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
-  const [audioError, setAudioError] = useState("");
 
   useEffect(() => {
     const barrelAudio = new Audio("/audio/gunbarrel.m4a");
     barrelAudio.preload = "auto";
-    barrelAudio.volume = 0.7;
-    barrelAudio.loop = false;
-    barrelAudio.load();
+    barrelAudio.volume = 0.05;
+    barrelAudio.loop = true;
 
     const bgmAudio = new Audio("/audio/ribhavagrawal-the-beginning.mp3");
     bgmAudio.preload = "auto";
     bgmAudio.loop = true;
     bgmAudio.volume = 0.4;
-    bgmAudio.load();
 
     barrelAudioRef.current = barrelAudio;
     bgmAudioRef.current = bgmAudio;
@@ -49,55 +46,30 @@ function Landing({
     };
   }, []);
 
-  const playAudioFromGesture = (audio, label) => {
-    if (!audio) return Promise.resolve(false);
-
-    audio.muted = false;
-    audio.currentTime = 0;
-
-    try {
-      const playResult = audio.play();
-      if (playResult && typeof playResult.then === "function") {
-        return playResult
-          .then(() => true)
-          .catch((error) => {
-            console.warn(`Unable to play ${label} audio`, error);
-            return false;
-          });
-      }
-
-      return Promise.resolve(!audio.paused);
-    } catch (error) {
-      console.warn(`Unable to play ${label} audio`, error);
-      return Promise.resolve(false);
-    }
-  };
-
   const handleEnter = async () => {
     if (!assetsReady || hasEntered) return;
 
-    setAudioError("");
+    setHasEntered(true);
     const barrelAudio = barrelAudioRef.current;
     const bgmAudio = bgmAudioRef.current;
-    const [barrelStarted, bgmStarted] = await Promise.all([
-      playAudioFromGesture(barrelAudio, "barrel"),
-      playAudioFromGesture(bgmAudio, "bgm"),
-    ]);
 
-    if (barrelStarted && bgmStarted) {
-      setHasEntered(true);
-      return;
+    try {
+      if (barrelAudio) {
+        barrelAudio.currentTime = 0;
+        await barrelAudio.play();
+      }
+    } catch (error) {
+      console.warn("Unable to play barrel audio", error);
     }
 
-    if (barrelAudio) {
-      barrelAudio.pause();
-      barrelAudio.currentTime = 0;
+    try {
+      if (bgmAudio) {
+        bgmAudio.currentTime = 0;
+        await bgmAudio.play();
+      }
+    } catch (error) {
+      console.warn("Unable to play bgm audio", error);
     }
-    if (bgmAudio) {
-      bgmAudio.pause();
-      bgmAudio.currentTime = 0;
-    }
-    setAudioError("Audio blocked. Tap ENTER again to allow sound.");
   };
 
   useEffect(() => {
@@ -180,9 +152,7 @@ function Landing({
 
     const loader = new GLTFLoader(loadingManager);
     const textureLoader = new THREE.TextureLoader(loadingManager);
-    const emissiveTexture = textureLoader.load(
-      "/textures/gunemap.jpg",
-    );
+    const emissiveTexture = textureLoader.load("/textures/gunemap.jpg");
     emissiveTexture.flipY = false;
 
     // Create turret group
@@ -287,13 +257,17 @@ function Landing({
               />
             </div>
             {assetsReady ? (
-              <button className="loading-screen__enter-btn" onClick={handleEnter}>
+              <button
+                className="loading-screen__enter-btn"
+                onClick={handleEnter}
+              >
                 ENTER
               </button>
             ) : (
-              <p className="loading-screen__hint">Preparing landing models...</p>
+              <p className="loading-screen__hint">
+                Preparing landing models...
+              </p>
             )}
-            {audioError ? <p className="loading-screen__hint">{audioError}</p> : null}
           </div>
         </div>
       )}
@@ -307,7 +281,7 @@ function Landing({
         <Sandbox />
       </div>
       <div className="sky-lightning-layer">
-        <SkyLightning />
+        <SkyLightning canPlaySound={hasEntered} />
       </div>
       <div className="embers-strip">
         <img src="/textures/sparklee.png" />
@@ -388,4 +362,3 @@ function Landing({
 }
 
 export default Landing;
-

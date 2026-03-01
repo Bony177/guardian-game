@@ -1,8 +1,26 @@
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
-import { useEffect, useMemo, useState } from "react";
+import {
+  Bloom,
+  EffectComposer,
+  ToneMapping,
+} from "@react-three/postprocessing";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AdditiveBlending, Vector3 } from "three";
 import { LightningStrike } from "three-stdlib";
+
+const LIGHTNING_MEDIA_SOURCES = ["/audio/light.mp3"];
+
+async function resolveLightningMediaSource(signal) {
+  for (const source of LIGHTNING_MEDIA_SOURCES) {
+    try {
+      const response = await fetch(source, { method: "HEAD", signal });
+      if (response.ok) return source;
+    } catch {
+      // Try next source.
+    }
+  }
+  return null;
+}
 
 function LightningRay({ strikeId }) {
   const baseSource = useMemo(() => {
@@ -46,7 +64,8 @@ function LightningRay({ strikeId }) {
     const t = clock.getElapsedTime();
     rayParams.destOffset.x = baseDest.x + Math.sin(t * 7.4 + strikeId) * 1.4;
     rayParams.destOffset.y = baseDest.y + Math.cos(t * 9.2 + strikeId) * 0.8;
-    rayParams.sourceOffset.x = baseSource.x + Math.sin(t * 4.6 + strikeId) * 0.42;
+    rayParams.sourceOffset.x =
+      baseSource.x + Math.sin(t * 4.6 + strikeId) * 0.42;
 
     geometry.update(t);
   });
@@ -65,9 +84,51 @@ function LightningRay({ strikeId }) {
   );
 }
 
-export default function SkyLightning() {
+export default function SkyLightning({ canPlaySound = false }) {
   const [active, setActive] = useState(false);
   const [strikeId, setStrikeId] = useState(0);
+  const strikeMediaRef = useRef(null);
+  const canPlaySoundRef = useRef(canPlaySound);
+
+  useEffect(() => {
+    canPlaySoundRef.current = canPlaySound;
+  }, [canPlaySound]);
+
+  useEffect(() => {
+    let disposed = false;
+    const abortController = new AbortController();
+
+    (async () => {
+      const source = await resolveLightningMediaSource(abortController.signal);
+      if (disposed || !source) return;
+
+      const media = new Audio(source);
+      media.preload = "auto";
+      media.volume = 0.5;
+      strikeMediaRef.current = media;
+    })();
+
+    return () => {
+      disposed = true;
+      abortController.abort();
+      if (strikeMediaRef.current) {
+        strikeMediaRef.current.pause();
+        strikeMediaRef.current.currentTime = 0;
+      }
+      strikeMediaRef.current = null;
+    };
+  }, []);
+
+  const playStrikeMedia = () => {
+    if (!canPlaySoundRef.current) return;
+    const media = strikeMediaRef.current;
+    if (!media) return;
+
+    media.currentTime = 0;
+    void media.play().catch((error) => {
+      console.warn("Unable to play lightning media", error);
+    });
+  };
 
   useEffect(() => {
     let launchTimer = 0;
@@ -81,6 +142,7 @@ export default function SkyLightning() {
 
         setStrikeId((prev) => prev + 1);
         setActive(true);
+        playStrikeMedia();
 
         const strikeDuration = 900 + Math.random() * 700;
         stopTimer = window.setTimeout(() => {
