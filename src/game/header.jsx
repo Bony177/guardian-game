@@ -1,16 +1,16 @@
 function Header({
   setActiveOverlay,
   startGame,
-  playHoverSound,
-  playClickSound,
+  playHeaderHoverSound,
+  playHeaderClickSound,
 }) {
   return (
     <div className="header">
       <div className="nav-left">
         <button
-          onMouseEnter={playHoverSound}
+          onMouseEnter={playHeaderHoverSound}
           onClick={() => {
-            playClickSound();
+            playHeaderClickSound();
             setActiveOverlay("home");
           }}
         >
@@ -18,9 +18,9 @@ function Header({
         </button>
 
         <button
-          onMouseEnter={playHoverSound}
+          onMouseEnter={playHeaderHoverSound}
           onClick={() => {
-            playClickSound();
+            playHeaderClickSound();
             setActiveOverlay("updates");
           }}
         >
@@ -28,9 +28,9 @@ function Header({
         </button>
 
         <button
-          onMouseEnter={playHoverSound}
+          onMouseEnter={playHeaderHoverSound}
           onClick={() => {
-            playClickSound();
+            playHeaderClickSound();
             setActiveOverlay("about");
           }}
         >
@@ -38,9 +38,9 @@ function Header({
         </button>
 
         <button
-          onMouseEnter={playHoverSound}
+          onMouseEnter={playHeaderHoverSound}
           onClick={() => {
-            playClickSound();
+            playHeaderClickSound();
             setActiveOverlay("contact");
           }}
         >
@@ -50,9 +50,9 @@ function Header({
 
       <button
         className="play-now"
-        onMouseEnter={playHoverSound}
+        onMouseEnter={playHeaderHoverSound}
         onClick={() => {
-          playClickSound();
+          playHeaderClickSound();
           startGame();
         }}
       >

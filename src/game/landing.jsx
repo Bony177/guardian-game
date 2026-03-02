@@ -18,13 +18,55 @@ function Landing({
   const mountRef = useRef(null);
   const barrelAudioRef = useRef(null);
   const bgmAudioRef = useRef(null);
+  const headerHoverAudioRef = useRef(null);
+  const headerClickAudioRef = useRef(null);
   const hoverAudioRef = useRef(null);
   const clickAudioRef = useRef(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [assetsReady, setAssetsReady] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
-
   useEffect(() => {
+    const unlockAudio = () => {
+      const allAudios = [
+        headerHoverAudioRef.current,
+        headerClickAudioRef.current,
+        hoverAudioRef.current,
+        clickAudioRef.current,
+        barrelAudioRef.current,
+        bgmAudioRef.current,
+      ];
+
+      allAudios.forEach((audio) => {
+        if (!audio) return;
+        audio
+          .play()
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          })
+          .catch(() => {});
+      });
+
+      window.removeEventListener("click", unlockAudio);
+    };
+
+    window.addEventListener("click", unlockAudio);
+
+    return () => {
+      window.removeEventListener("click", unlockAudio);
+    };
+  }, []);
+  useEffect(() => {
+    const headerHoverAudio = new Audio("/audio/header-hover.mp3");
+    headerHoverAudio.preload = "auto";
+    headerHoverAudio.volume = 0.4; // subtle
+
+    const headerClickAudio = new Audio("/audio/header-click.mp3");
+    headerClickAudio.preload = "auto";
+    headerClickAudio.volume = 0.3;
+
+    headerHoverAudioRef.current = headerHoverAudio;
+    headerClickAudioRef.current = headerClickAudio;
     const barrelAudio = new Audio("/audio/gunbarrel.m4a");
     const hoverAudio = new Audio("/audio/buttonhover.mp3");
     hoverAudio.preload = "auto";
@@ -103,6 +145,21 @@ function Landing({
       audio.currentTime = 0;
       audio.play().catch(() => {});
     } catch {}
+  };
+  const playHeaderHoverSound = () => {
+    const audio = headerHoverAudioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  };
+
+  const playHeaderClickSound = () => {
+    const audio = headerClickAudioRef.current;
+    if (!audio) return;
+
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
   };
 
   useEffect(() => {
@@ -337,8 +394,8 @@ function Landing({
       <Header
         setActiveOverlay={setActiveOverlay}
         startGame={startGame}
-        playHoverSound={playHoverSound}
-        playClickSound={playClickSound}
+        playHeaderHoverSound={playHeaderHoverSound}
+        playHeaderClickSound={playHeaderClickSound}
       />
 
       <Overlay
