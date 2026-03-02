@@ -334,7 +334,12 @@ function Landing({
       <div className="shield-pulse" />
       <div className="grain" />
 
-      <Header setActiveOverlay={setActiveOverlay} startGame={startGame} />
+      <Header
+        setActiveOverlay={setActiveOverlay}
+        startGame={startGame}
+        playHoverSound={playHoverSound}
+        playClickSound={playClickSound}
+      />
 
       <Overlay
         activeOverlay={activeOverlay}

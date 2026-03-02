@@ -199,12 +199,49 @@ body {
 .landing .header {
   display: flex;
   justify-content: space-between;
-  padding: 20px 40px;
+  padding: 3px 90px;
+  
   position: relative;
   z-index: 20;
+   background: rgba(0, 0, 0, 0.5);  
+}
+.landing .nav-left {
+  display: flex;
+  align-items: center;
+  gap: 70px;   /* 👈 adjust spacing here */
+}
+.landing .nav-left button {
+  font-family: 'Zen Dots';
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  position: relative;
+  transition: 0.3s ease;
 }
 
-.landing .nav-left button,
+/* Animated underline */
+.landing .nav-left button::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background: #ffffff;
+  transition: width 0.3s ease;
+}
+/* Glow effect */
+.landing .nav-left button:hover {
+  color: #ffffff;
+  text-shadow:
+    0 0 5px #ff7a00,
+    0 0 10px #ff7a00,
+    0 0 20px rgba(255, 122, 0, 0.8);
+}
+.landing .nav-left button:hover::after {
+  width: 100%;
+}
 .landing .play-now {
   margin-right: 20px;
   background: transparent;
@@ -226,15 +263,15 @@ body {
 
 .landing .title {
   font-family: 'Zen Dots';
-  font-size: 110px;
+  font-size: 120px;
   font-weight: bold;
-  margin-top: -1px;
+  margin-top: 38px;
   margin-left: 35px;
 }
 
 .landing .subtitle {
   font-size: 20px;
-  margin-top: -20px;
+  margin-top: -80px;
   margin-left: 35px;
 }
 .landing .hero-buttons button {
