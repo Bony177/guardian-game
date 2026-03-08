@@ -18,7 +18,8 @@ export function createChimneySmoke(scene, options = {}) {
   smokeGroup.position.copy(toVector3(normalizedOptions.position));
   scene.add(smokeGroup);
 
-  const textureLoader = new THREE.TextureLoader();
+  const textureLoader =
+    normalizedOptions.textureLoader || new THREE.TextureLoader();
   const smokeTexture = textureLoader.load("/textures/smoke.png");
 
   const particles = [];

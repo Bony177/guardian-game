@@ -4,9 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { initAttackState, updateShipAttack } from "./attack";
 import { attachEngines, disposeEngines, updateEngines } from "./engineFX";
 
-
-
-const gltfLoader = new GLTFLoader();
+let gltfLoader = new GLTFLoader();
 
 // model cache and load controls
 const modelCache = new Map();
@@ -24,6 +22,12 @@ function loadGLTF(url) {
 
   modelCache.set(url, p);
   return p;
+}
+
+export function setShipsLoadingManager(loadingManager = null) {
+  gltfLoader = loadingManager
+    ? new GLTFLoader(loadingManager)
+    : new GLTFLoader();
 }
 
 
@@ -62,6 +66,13 @@ const SHIP_TYPES = {
     scale: 4,
   },
 };
+
+export function preloadShipModels() {
+  const urls = new Set(
+    Object.values(SHIP_TYPES).map((shipType) => shipType.model),
+  );
+  return Promise.all([...urls].map((url) => loadGLTF(url)));
+}
 
 const GROUND_LEVEL = -5;
 const MIN_SHIP_HEIGHT = GROUND_LEVEL + 2;

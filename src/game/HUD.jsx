@@ -55,6 +55,8 @@ export default function HUD({
           </div>
         </div>
       </div>
+      {/* Bottom dashboard background */}
+      <div className="bottom-dashboard"></div>
 
       {/* Radar */}
       <div className="radar-panel">

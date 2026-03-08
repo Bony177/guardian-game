@@ -75,9 +75,11 @@ body {
 /* Panel Container */
 .radar-panel {
   position: fixed;
+  padding-left: -5px;
   bottom: 10px;
-  left: 20px;
-  width: 350px;
+  left: 5px;
+  width: 330px;
+  z-index: 20;
   height: 150px;
   padding: 5px;
   font-family: 'Orbitron', sans-serif;
@@ -676,6 +678,65 @@ body {
   opacity: 1;   /* IMPORTANT — keep very low */
   mix-blend-mode: overlay;
 }
+.scene-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10030;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(32, 94, 136, 0.28), transparent 62%),
+    rgba(2, 9, 20, 0.88);
+  backdrop-filter: blur(5px);
+}
+
+.scene-loading-panel {
+  width: min(420px, calc(100vw - 36px));
+  border: 1px solid rgba(124, 233, 255, 0.52);
+  background: linear-gradient(
+    150deg,
+    rgba(6, 20, 34, 0.95),
+    rgba(4, 16, 30, 0.9)
+  );
+  box-shadow:
+    0 0 26px rgba(0, 208, 255, 0.24),
+    inset 0 0 20px rgba(34, 160, 211, 0.14);
+  padding: 18px 20px;
+  font-family: "Orbitron", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.scene-loading-label {
+  margin: 0;
+  color: #b6f6ff;
+  font-size: 11px;
+}
+
+.scene-loading-percent {
+  margin: 10px 0 0;
+  color: #e1fcff;
+  font-size: 24px;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(142, 244, 255, 0.35);
+}
+
+.scene-loading-bar {
+  margin-top: 12px;
+  height: 10px;
+  border: 1px solid rgba(137, 230, 255, 0.55);
+  background: rgba(8, 30, 47, 0.86);
+  overflow: hidden;
+}
+
+.scene-loading-fill {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #49b7ff, #67ffe3);
+  box-shadow: 0 0 14px rgba(84, 255, 228, 0.42);
+  transition: width 0.2s linear;
+}
+
 .vault-fail-overlay {
   position: fixed;
   inset: 0;
@@ -810,3 +871,65 @@ body {
 
 
 
+
+/* ===============================
+   BOTTOM DASHBOARD OVERLAY
+================================ */
+
+.bottom-dashboard{
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 310px;
+  opacity: 0.2;
+
+  z-index: 5;
+  pointer-events: none;
+
+  backdrop-filter: blur(8px);
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(4,10,18,0.96) 0%,
+      rgba(4,10,18,0.86) 35%,
+      rgba(4,10,18,0.55) 65%,
+      rgba(4,10,18,0.0) 100%
+    );
+
+  border-top: 1px solid rgba(0,200,255,0.25);
+
+  box-shadow:
+    0 -20px 60px rgba(0,0,0,0.8),
+    inset 0 10px 30px rgba(0,200,255,0.05);
+
+  /* 👇 THIS MAKES THE ANGLED SHAPE */
+ clip-path: polygon(
+  0% 40%,
+  22% 40%,
+  32% 75%,
+  68% 75%,
+  78% 40%,
+  100% 40%,
+  100% 100%,
+  0% 100%
+);
+}
+
+.bottom-dashboard::before{
+  content:"";
+  position:absolute;
+  inset:0;
+
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0,255,255,0.03) 0px,
+      rgba(0,255,255,0.03) 1px,
+      transparent 1px,
+      transparent 80px
+    );
+
+  opacity:0.8;
+}

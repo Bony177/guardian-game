@@ -11,6 +11,8 @@ import {
   damageShip,
   getShipMeshes,
   getActiveShipCount,
+  preloadShipModels,
+  setShipsLoadingManager,
   startShipsSession,
   stopShipsSession,
   resetShips,
@@ -212,6 +214,11 @@ function Scene({ onBackHome, onPlayAgain }) {
   const [vaultPercent, setVaultPercent] = useState(100);
   const [shieldRegenPercent, setShieldRegenPercent] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isSceneLoading, setIsSceneLoading] = useState(true);
+  const [sceneLoadingProgress, setSceneLoadingProgress] = useState(0);
+  const [sceneLoadingMessage, setSceneLoadingMessage] = useState(
+    "Preparing battlefield assets...",
+  );
 
   useEffect(() => {
     if (!mountRef.current) return undefined;
@@ -224,9 +231,16 @@ function Scene({ onBackHome, onPlayAgain }) {
     setVaultPercent(100);
     setShieldRegenPercent(0);
     setIsGameOver(false);
+    setSceneLoadingProgress(0);
+    setSceneLoadingMessage("Preparing battlefield assets...");
+    setIsSceneLoading(true);
 
     let disposed = false;
     let rafId = null;
+    let hasStartedGameplay = false;
+    let managerFinished = true;
+    let shipsPreloaded = false;
+    let loadingFailed = false;
     // 🎵 Background Music
     let bgMusic = null;
     let bgMusicStarted = false;
@@ -269,6 +283,67 @@ function Scene({ onBackHome, onPlayAgain }) {
     const vaultGlowPulseSpeed = 2.4;
     const vaultGlowPulseMin = 0.62;
     const vaultGlowPulseMax = 2.18;
+    const loadingManager = new THREE.LoadingManager();
+    const managedTextureLoader = new THREE.TextureLoader(loadingManager);
+    const managedGltfLoader = new GLTFLoader(loadingManager);
+
+    function updateSceneLoadProgress(itemsLoaded = 0, itemsTotal = 0) {
+      if (disposed || loadingFailed) return;
+      if (!itemsTotal) return;
+      const nextPercent = Math.round(
+        THREE.MathUtils.clamp((itemsLoaded / itemsTotal) * 100, 0, 100),
+      );
+      setSceneLoadingProgress((prev) => (nextPercent > prev ? nextPercent : prev));
+    }
+
+    function tryStartGameplay() {
+      if (disposed || hasStartedGameplay || loadingFailed) return;
+      if (!managerFinished || !shipsPreloaded) return;
+
+      hasStartedGameplay = true;
+      setSceneLoadingProgress(100);
+      setSceneLoadingMessage("Launch complete");
+      setIsSceneLoading(false);
+
+      spawnShip(scene, camera, shipSessionId);
+      spawnShip(scene, camera, shipSessionId);
+
+      console.log("Starting animation loop");
+      window.__BARREL_EXP = barrelExpControls;
+      console.log("BARREL_EXP exposed to window.__BARREL_EXP");
+      console.log(
+        "   Edit position: window.__BARREL_EXP.setPosition(0, -0.5, 0.16, 0.23)",
+      );
+      console.log("   Edit size: window.__BARREL_EXP.setSize(2.2)");
+      animate();
+    }
+
+    loadingManager.onStart = (_, itemsLoaded, itemsTotal) => {
+      managerFinished = false;
+      if (disposed || loadingFailed) return;
+      setSceneLoadingMessage("Loading 3D models...");
+      updateSceneLoadProgress(itemsLoaded, itemsTotal);
+    };
+
+    loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
+      if (disposed || loadingFailed) return;
+      updateSceneLoadProgress(itemsLoaded, itemsTotal);
+    };
+
+    loadingManager.onLoad = () => {
+      managerFinished = true;
+      if (disposed || loadingFailed) return;
+      setSceneLoadingProgress((prev) => Math.max(prev, 95));
+      setSceneLoadingMessage("Finalizing scene...");
+      tryStartGameplay();
+    };
+
+    loadingManager.onError = (url) => {
+      if (disposed) return;
+      loadingFailed = true;
+      console.error("Asset failed to load:", url);
+      setSceneLoadingMessage("Failed to load assets. Please try again.");
+    };
 
     const clock = new THREE.Clock();
     const raycaster = new THREE.Raycaster();
@@ -631,9 +706,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     renderer.shadowMap.enabled = true;
     mountNode.appendChild(renderer.domElement);
 
-    backgroundTexture = new THREE.TextureLoader().load(
-      "/textures/nightsky.jpg",
-    );
+    backgroundTexture = managedTextureLoader.load("/textures/nightsky.jpg");
     backgroundTexture.colorSpace = THREE.SRGBColorSpace;
 
     const skyGeometry = new THREE.SphereGeometry(700, 64, 32);
@@ -932,7 +1005,7 @@ function Scene({ onBackHome, onPlayAgain }) {
       { position: new THREE.Vector3(-3, 2, 0), opacity: 0.02, speed: 1.2 },
     ];
     const chimneySmokes = chimneySmokeConfigs.map((config) =>
-      createChimneySmoke(scene, config),
+      createChimneySmoke(scene, { ...config, textureLoader: managedTextureLoader }),
     );
     const smokeUnderRenderOrder = RENDER_LAYER.BUILDINGS - 1;
     chimneySmokes.forEach((smokeFx) => {
@@ -1096,8 +1169,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     // 🌌 Circular Mist Zone
     // ======================
 
-    const textureLoader = new THREE.TextureLoader();
-    const mistTexture = textureLoader.load("/textures/mist_circle.png");
+    const mistTexture = managedTextureLoader.load("/textures/mist_circle.png");
 
     const mistMaterial = new THREE.MeshBasicMaterial({
       map: mistTexture,
@@ -1121,8 +1193,7 @@ function Scene({ onBackHome, onPlayAgain }) {
 
     //scene.add(mistPlane);
 
-    const textureLoaderr = new THREE.TextureLoader();
-    const mistTexturer = textureLoaderr.load("/textures/mist_circle.png");
+    const mistTexturer = managedTextureLoader.load("/textures/mist_circle.png");
 
     const mistMaterialr = new THREE.MeshBasicMaterial({
       map: mistTexturer,
@@ -1161,7 +1232,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     const gunGroup = new THREE.Group();
     scene.add(gunGroup);
 
-    const loader = new GLTFLoader();
+    const loader = managedGltfLoader;
 
     loader.load(
       "/models/terrain.glb",
@@ -1257,7 +1328,7 @@ function Scene({ onBackHome, onPlayAgain }) {
 
         //debug end
 
-        const expTexture = new THREE.TextureLoader().load("/textures/EXP.png");
+        const expTexture = managedTextureLoader.load("/textures/EXP.png");
         expTexture.colorSpace = THREE.SRGBColorSpace;
         expTexture.wrapS = THREE.ClampToEdgeWrapping;
         expTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -1294,7 +1365,7 @@ function Scene({ onBackHome, onPlayAgain }) {
       (err) => console.error("Gun barrel load error", err),
     );
 
-    const vaultLoader = new GLTFLoader();
+    const vaultLoader = managedGltfLoader;
 
     let vault = null;
     let vaultShadow = null;
@@ -1395,7 +1466,7 @@ function Scene({ onBackHome, onPlayAgain }) {
 
     //bulding load
 
-    const gltfLoader = new GLTFLoader();
+    const gltfLoader = managedGltfLoader;
     function _loadBuilding(path, position, scale, rotationY = Math.PI) {
       gltfLoader.load(
         path,
@@ -1433,8 +1504,20 @@ function Scene({ onBackHome, onPlayAgain }) {
     //loadBuilding("/models/bl5.glb", new THREE.Vector3(4, 3, 4), 4);
     //loadBuilding("/models/bl6.glb", new THREE.Vector3(-4, 3, 4), 5);
 
-    spawnShip(scene, camera, shipSessionId);
-    spawnShip(scene, camera, shipSessionId);
+    setShipsLoadingManager(loadingManager);
+    preloadShipModels()
+      .then(() => {
+        shipsPreloaded = true;
+        if (disposed || loadingFailed) return;
+        setSceneLoadingMessage("Preparing launch...");
+        tryStartGameplay();
+      })
+      .catch((error) => {
+        if (disposed) return;
+        loadingFailed = true;
+        console.error("Failed to preload ship models", error);
+        setSceneLoadingMessage("Failed to load ship models. Please try again.");
+      });
 
     function generateRadarDots(count) {
       const container = document.getElementById("dots");
@@ -1716,19 +1799,11 @@ function Scene({ onBackHome, onPlayAgain }) {
       renderer.render(scene, camera);
     }
 
-    console.log("Starting animation loop");
-    window.__BARREL_EXP = barrelExpControls;
-    console.log("✅ BARREL_EXP exposed to window.__BARREL_EXP");
-    console.log(
-      "   Edit position: window.__BARREL_EXP.setPosition(0, -0.5, 0.16, 0.23)",
-    );
-    console.log("   Edit size: window.__BARREL_EXP.setSize(2.2)");
-    animate();
-
     return () => {
       disposed = true;
       setShipDestroyedCallback(null);
       stopShipsSession(shipSessionId);
+      setShipsLoadingManager();
 
       if (rafId !== null) {
         window.cancelAnimationFrame(rafId);
@@ -1828,17 +1903,22 @@ function Scene({ onBackHome, onPlayAgain }) {
   }, []);
 
   const showShieldDownHud = shieldPercent <= 0 || shieldRegenPercent > 0;
+  const safeLoadingPercent = Math.round(
+    THREE.MathUtils.clamp(sceneLoadingProgress, 0, 100),
+  );
 
   return (
     <>
-      <HUD
-        score={score}
-        enemyCount={enemyCount}
-        shieldPercent={shieldPercent}
-        vaultPercent={vaultPercent}
-        shieldRegenPercent={shieldRegenPercent}
-        showShieldRegen={showShieldDownHud}
-      />
+      {!isSceneLoading ? (
+        <HUD
+          score={score}
+          enemyCount={enemyCount}
+          shieldPercent={shieldPercent}
+          vaultPercent={vaultPercent}
+          shieldRegenPercent={shieldRegenPercent}
+          showShieldRegen={showShieldDownHud}
+        />
+      ) : null}
       <div
         ref={mountRef}
         style={{
@@ -1847,6 +1927,20 @@ function Scene({ onBackHome, onPlayAgain }) {
           overflow: "hidden",
         }}
       />
+      {isSceneLoading ? (
+        <div className="scene-loading-overlay" role="status" aria-live="polite">
+          <div className="scene-loading-panel">
+            <p className="scene-loading-label">{sceneLoadingMessage}</p>
+            <p className="scene-loading-percent">{safeLoadingPercent}%</p>
+            <div className="scene-loading-bar">
+              <div
+                className="scene-loading-fill"
+                style={{ width: `${safeLoadingPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
       {isGameOver ? (
         <div className="vault-fail-overlay">
           <div className="vault-fail-card">
@@ -1881,5 +1975,4 @@ function Scene({ onBackHome, onPlayAgain }) {
 }
 
 export default Scene;
-
 
