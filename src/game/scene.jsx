@@ -209,6 +209,7 @@ const BARREL_EXP_DEFAULTS = {
 function Scene({ onBackHome, onPlayAgain }) {
   const mountRef = useRef(null);
   const [score, setScore] = useState(0);
+  const [killCount, setKillCount] = useState(0);
   const [enemyCount, setEnemyCount] = useState(0);
   const [shieldPercent, setShieldPercent] = useState(100);
   const [vaultPercent, setVaultPercent] = useState(100);
@@ -226,6 +227,7 @@ function Scene({ onBackHome, onPlayAgain }) {
 
     console.log("Scene mounted");
     setScore(0);
+    setKillCount(0);
     setEnemyCount(0);
     setShieldPercent(100);
     setVaultPercent(100);
@@ -1630,6 +1632,7 @@ function Scene({ onBackHome, onPlayAgain }) {
       if (!points) return;
 
       setScore((prevScore) => prevScore + points);
+      setKillCount((prevKillCount) => prevKillCount + 1);
       showScorePopup(points);
     }
 
@@ -1912,6 +1915,7 @@ function Scene({ onBackHome, onPlayAgain }) {
       {!isSceneLoading ? (
         <HUD
           score={score}
+          killCount={killCount}
           enemyCount={enemyCount}
           shieldPercent={shieldPercent}
           vaultPercent={vaultPercent}

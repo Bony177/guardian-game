@@ -2,6 +2,7 @@ import "../index.css";
 
 export default function HUD({
   score = 0,
+  killCount = 0,
   enemyCount = 0,
   shieldPercent = 100,
   vaultPercent = 100,
@@ -16,8 +17,16 @@ export default function HUD({
     powerFillClass = "power-fill-yellow";
   }
 
-  // Format score with thousands separator
-  const formattedScore = Math.max(0, Math.round(score)).toLocaleString();
+  const scoreDigits = Math.max(0, Math.round(score))
+    .toString()
+    .padStart(6, "0")
+    .slice(-6)
+    .split("");
+  const killDigits = Math.max(0, Math.round(killCount))
+    .toString()
+    .padStart(4, "0")
+    .slice(-4)
+    .split("");
 
   // Format enemy count with zero padding
   const formattedEnemyCount = enemyCount.toString().padStart(2, "0");
@@ -46,12 +55,26 @@ export default function HUD({
           </div>
         </div>
 
-        <div className="hud-box sector-box">SECTOR 5 – NIGHT ASSAULT</div>
+        <div className="hud-box sector-box">SECTOR ECLIPSE-7</div>
 
         <div className="hud-box score-box">
           <div className="score-panel">
-            SCORE
-            <span>{formattedScore}</span>
+            <div className="score-label">SCORE</div>
+            <div className="score-digits">
+              {scoreDigits.map((digit, index) => (
+                <div key={`score-${index}`} className="digit">
+                  {digit}
+                </div>
+              ))}
+            </div>
+            <div className="score-label kill-label">KILLS</div>
+            <div className="score-digits kill-digits">
+              {killDigits.map((digit, index) => (
+                <div key={`kill-${index}`} className="digit">
+                  {digit}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
