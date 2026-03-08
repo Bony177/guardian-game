@@ -204,18 +204,26 @@ const BARREL_EXP_DEFAULTS = {
   size: 0.5,
 };
 
-function Scene() {
+function Scene({ onBackHome, onPlayAgain }) {
   const mountRef = useRef(null);
   const [score, setScore] = useState(0);
   const [enemyCount, setEnemyCount] = useState(0);
   const [shieldPercent, setShieldPercent] = useState(100);
-  const [powerLevel, setPowerLevel] = useState(80);
+  const [vaultPercent, setVaultPercent] = useState(100);
+  const [shieldRegenPercent, setShieldRegenPercent] = useState(0);
+  const [isGameOver, setIsGameOver] = useState(false);
 
   useEffect(() => {
     if (!mountRef.current) return undefined;
     const mountNode = mountRef.current;
 
     console.log("Scene mounted");
+    setScore(0);
+    setEnemyCount(0);
+    setShieldPercent(100);
+    setVaultPercent(100);
+    setShieldRegenPercent(0);
+    setIsGameOver(false);
 
     let disposed = false;
     let rafId = null;
@@ -226,6 +234,13 @@ function Scene() {
     let shieldBreakPlayed = false; // prevent multiple plays
     let lastRadarCount = -1;
     let lastShieldPercent = -1;
+    let lastVaultPercent = 100;
+    let lastShieldRegenValue = -1;
+    let vaultHealth = 100;
+    let shieldRegenValue = 0;
+    let gameOverTriggered = false;
+    const SHIELD_REGEN_RATE_PER_SECOND = 5;
+    const VAULT_DAMAGE_MULTIPLIER = 1;
     const activeExplosions = [];
     const activeFireTraces = [];
 
@@ -264,7 +279,6 @@ function Scene() {
       2: 200,
       3: 3000,
     };
-    let powerCycleTimer = null;
     const barrelExpState = {
       isPlaying: false,
       elapsed: 0,
@@ -657,6 +671,7 @@ function Scene() {
       shield.material.depthTest = true;
       shield.material.depthWrite = false;
     }
+    shield.takeFallbackDamage = applyVaultDamage;
     scene.add(shield.object);
 
     const shieldGlowControls = {
@@ -1381,7 +1396,7 @@ function Scene() {
     //bulding load
 
     const gltfLoader = new GLTFLoader();
-    function loadBuilding(path, position, scale, rotationY = Math.PI) {
+    function _loadBuilding(path, position, scale, rotationY = Math.PI) {
       gltfLoader.load(
         path,
         (gltf) => {
@@ -1457,8 +1472,51 @@ function Scene() {
       setShieldPercent(percent);
     }
 
-    function formatScore(value) {
-      return Math.max(0, Math.round(value)).toLocaleString();
+    function updateVaultUI() {
+      const percent = Math.round(THREE.MathUtils.clamp(vaultHealth, 0, 100));
+      if (percent === lastVaultPercent) return;
+      lastVaultPercent = percent;
+      setVaultPercent(percent);
+    }
+
+    function updateShieldRegenUI() {
+      const percent = Math.round(THREE.MathUtils.clamp(shieldRegenValue, 0, 100));
+      if (percent === lastShieldRegenValue) return;
+      lastShieldRegenValue = percent;
+      setShieldRegenPercent(percent);
+    }
+
+    function triggerGameOver() {
+      if (gameOverTriggered) return;
+      gameOverTriggered = true;
+
+      vaultHealth = 0;
+      lastVaultPercent = 0;
+      shieldRegenValue = 0;
+      lastShieldRegenValue = 0;
+
+      setVaultPercent(0);
+      setShieldRegenPercent(0);
+      setEnemyCount(0);
+      setIsGameOver(true);
+
+      setShipDestroyedCallback(null);
+      stopShipsSession(shipSessionId);
+      resetShips();
+    }
+
+    function applyVaultDamage(amount) {
+      if (gameOverTriggered) return;
+
+      const safeAmount = Number(amount);
+      if (!Number.isFinite(safeAmount) || safeAmount <= 0) return;
+
+      vaultHealth = Math.max(0, vaultHealth - safeAmount * VAULT_DAMAGE_MULTIPLIER);
+      updateVaultUI();
+
+      if (vaultHealth <= 0) {
+        triggerGameOver();
+      }
     }
 
     function showScorePopup(points) {
@@ -1484,6 +1542,7 @@ function Scene() {
     }
 
     function addScore(shipType) {
+      if (gameOverTriggered) return;
       const points = scoreByShipType[shipType] ?? 0;
       if (!points) return;
 
@@ -1491,44 +1550,17 @@ function Scene() {
       showScorePopup(points);
     }
 
-    function updateScoreUI(deltaSeconds) {
-      // Score updates are handled through React state
-      // The animation is performed in the HUD component
-    }
-
-    function applyPowerFillColor(level) {
-      // Color is now determined in HUD.jsx based on power level prop
-      // No DOM manipulation needed
-    }
-
-    function setPowerLevelInternal(level) {
-      const safeLevel = THREE.MathUtils.clamp(level, 1, 100);
-      setPowerLevel(Math.round(safeLevel));
-    }
-
-    function schedulePowerCycle() {
-      if (disposed) return;
-
-      const nextLevel = THREE.MathUtils.randFloat(40, 100);
-      setPowerLevelInternal(nextLevel);
-
-      const delayMs = Math.round(THREE.MathUtils.randFloat(2000, 4000));
-      powerCycleTimer = window.setTimeout(schedulePowerCycle, delayMs);
-    }
-
-    // Initialize power cycle
-    schedulePowerCycle();
-
     setShipDestroyedCallback(addScore);
 
     function animate() {
-      if (disposed) return;
+      if (disposed || gameOverTriggered) return;
       rafId = window.requestAnimationFrame(animate);
 
       const deltaMs = clock.getDelta() * 1000;
       const deltaSeconds = deltaMs / 1000;
 
       updateShips(camera, scene, deltaMs, shield, shipSessionId);
+      if (gameOverTriggered) return;
       // 🎵 Start music when first ship appears
       if (!bgMusicStarted && getActiveShipCount() > 0) {
         bgMusicStarted = true;
@@ -1567,13 +1599,34 @@ function Scene() {
       if (!shield.isDestroyed) {
         shieldBreakPlayed = false;
       }
+
+      if (shield.isDestroyed) {
+        shieldRegenValue = Math.min(
+          100,
+          shieldRegenValue + SHIELD_REGEN_RATE_PER_SECOND * deltaSeconds,
+        );
+        updateShieldRegenUI();
+
+        if (shieldRegenValue >= 100) {
+          if (typeof shield.restore === "function") {
+            shield.restore();
+          }
+          shieldRegenValue = 0;
+          lastShieldRegenValue = 0;
+          setShieldRegenPercent(0);
+        }
+      } else if (shieldRegenValue > 0 || lastShieldRegenValue !== 0) {
+        shieldRegenValue = 0;
+        lastShieldRegenValue = 0;
+        setShieldRegenPercent(0);
+      }
       updateShieldRingPosition();
       updateShieldRingVisualState();
       chimneySmokes.forEach((smokeFx) => smokeFx.update());
 
       updateRadarUI();
       updateShieldUI();
-      updateScoreUI(deltaSeconds);
+      updateVaultUI();
 
       if (gunBarrel) {
         if (isRecoiling) {
@@ -1680,9 +1733,6 @@ function Scene() {
       if (rafId !== null) {
         window.cancelAnimationFrame(rafId);
       }
-      if (powerCycleTimer !== null) {
-        window.clearTimeout(powerCycleTimer);
-      }
 
       window.removeEventListener("dblclick", onDoubleClick);
       window.removeEventListener("mousemove", onMouseMove);
@@ -1777,13 +1827,18 @@ function Scene() {
     };
   }, []);
 
+  const showShieldDownHud = shieldPercent <= 0 || shieldRegenPercent > 0;
+
   return (
     <>
       <HUD
         score={score}
         enemyCount={enemyCount}
         shieldPercent={shieldPercent}
-        powerLevel={powerLevel}
+        vaultPercent={vaultPercent}
+        shieldRegenPercent={shieldRegenPercent}
+        showShieldRegen={showShieldDownHud}
+        showVaultHud={showShieldDownHud}
       />
       <div
         ref={mountRef}
@@ -1793,8 +1848,39 @@ function Scene() {
           overflow: "hidden",
         }}
       />
+      {isGameOver ? (
+        <div className="vault-fail-overlay">
+          <div className="vault-fail-card">
+            <h2>GAME OVER</h2>
+            <p>You failed to save the sector and guard the vault.</p>
+            <p className="vault-fail-score">SCORE: {score.toLocaleString()}</p>
+            <div className="vault-fail-actions">
+              <button
+                type="button"
+                className="vault-fail-btn secondary"
+                onClick={() => {
+                  if (typeof onBackHome === "function") onBackHome();
+                }}
+              >
+                Back To Home
+              </button>
+              <button
+                type="button"
+                className="vault-fail-btn primary"
+                onClick={() => {
+                  if (typeof onPlayAgain === "function") onPlayAgain();
+                }}
+              >
+                Play Again
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
 
 export default Scene;
+
+

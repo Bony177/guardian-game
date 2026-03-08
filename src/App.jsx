@@ -4,10 +4,23 @@ import Landing from "./game/landing";
 
 function App() {
   const [inGame, setInGame] = useState(false);
+  const [sceneRunId, setSceneRunId] = useState(0);
   const [activeOverlay, setActiveOverlay] = useState(null);
   const [currentTab, setCurrentTab] = useState("MISSIONS");
 
   const startGame = () => {
+    setSceneRunId((prev) => prev + 1);
+    setInGame(true);
+    setActiveOverlay(null);
+  };
+
+  const backToHome = () => {
+    setInGame(false);
+    setActiveOverlay(null);
+  };
+
+  const playAgain = () => {
+    setSceneRunId((prev) => prev + 1);
     setInGame(true);
     setActiveOverlay(null);
   };
@@ -40,7 +53,11 @@ function App() {
           handleTabChange={handleTabChange}
         />
       ) : (
-        <Scene />
+        <Scene
+          key={sceneRunId}
+          onBackHome={backToHome}
+          onPlayAgain={playAgain}
+        />
       )}
     </div>
   );

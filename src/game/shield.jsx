@@ -519,6 +519,27 @@ export function createShield() {
     }
   };
 
+  shield.restore = () => {
+    shield.health = shield.maxHealth;
+    shield.isDestroyed = false;
+    shield.destroyTimer = 0;
+    shield.hitFlashTimer = 0;
+    shield.object.visible = true;
+    shield.object.scale.set(1, 1, 1);
+
+    if (shield.material) {
+      shield.material.opacity = shield.glow.domeOpacity;
+      shield.material.emissive.set(0x4f9dff);
+      shield.material.emissiveIntensity = shield.baseEmissive;
+    }
+
+    if (shield.bolts?.length) {
+      for (const bolt of shield.bolts) {
+        respawnBolt(bolt, shield.radius);
+      }
+    }
+  };
+
   shield.flash = () => {
     if (!shield.material) return;
     shield.material.emissive.set(0xff0000);

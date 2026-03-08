@@ -131,6 +131,100 @@ body {
   transition: width 0.12s linear;
 }
 
+.bottom-right-hud {
+  position: fixed;
+  right: 18px;
+  bottom: 20px;
+  width: min(280px, calc(100vw - 36px));
+  display: grid;
+  gap: 10px;
+  z-index: 10010;
+  pointer-events: none;
+}
+
+.vault-status-hud,
+.shield-regen-hud {
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  background: linear-gradient(
+    160deg,
+    rgba(3, 20, 36, 0.88),
+    rgba(7, 46, 72, 0.78)
+  );
+  box-shadow: 0 0 16px rgba(0, 220, 255, 0.2);
+  color: #9ef6ff;
+  font-family: "Orbitron", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.vault-status-hud {
+  border-color: rgba(255, 133, 101, 0.5);
+  background: linear-gradient(
+    160deg,
+    rgba(36, 13, 10, 0.9),
+    rgba(65, 20, 8, 0.76)
+  );
+  box-shadow: 0 0 16px rgba(255, 96, 64, 0.24);
+  color: #ffd8c4;
+}
+
+.vault-status-title {
+  font-size: 10px;
+  opacity: 0.95;
+}
+
+.vault-status-track {
+  margin-top: 8px;
+  height: 9px;
+  border: 1px solid rgba(255, 140, 108, 0.55);
+  background: rgba(30, 8, 6, 0.8);
+  overflow: hidden;
+}
+
+.vault-status-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff905b, #ff4f72);
+  box-shadow: 0 0 10px rgba(255, 106, 70, 0.7);
+  transition: width 0.18s linear;
+}
+
+.vault-status-value {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.shield-regen-title {
+  font-size: 10px;
+  opacity: 0.9;
+}
+
+.shield-regen-track {
+  margin-top: 8px;
+  height: 9px;
+  border: 1px solid rgba(105, 255, 233, 0.45);
+  background: rgba(1, 26, 40, 0.85);
+  overflow: hidden;
+}
+
+.shield-regen-fill {
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #38b6ff, #00ffd5);
+  box-shadow: 0 0 10px rgba(0, 255, 216, 0.65);
+  transition: width 0.18s linear;
+}
+
+.shield-regen-value {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
 /* Radar Body */
 .radar-body {
   position: relative;
@@ -592,6 +686,89 @@ body {
   opacity: 1;   /* IMPORTANT — keep very low */
   mix-blend-mode: overlay;
 }
+.vault-fail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 8, 20, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.vault-fail-card {
+  width: min(460px, calc(100vw - 36px));
+  border: 1px solid rgba(255, 91, 91, 0.55);
+  background: linear-gradient(
+    160deg,
+    rgba(27, 12, 18, 0.95),
+    rgba(8, 5, 15, 0.94)
+  );
+  box-shadow:
+    0 0 42px rgba(255, 70, 70, 0.24),
+    inset 0 0 32px rgba(255, 120, 120, 0.11);
+  padding: 28px 30px;
+  font-family: "Orbitron", sans-serif;
+  color: #ffe8e8;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.vault-fail-card h2 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  color: #ff8a8a;
+  text-shadow: 0 0 20px rgba(255, 88, 88, 0.4);
+}
+
+.vault-fail-card p {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.vault-fail-score {
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 700;
+  color: #ffd58f;
+  text-shadow: 0 0 16px rgba(255, 202, 107, 0.35);
+}
+
+.vault-fail-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vault-fail-btn {
+  pointer-events: auto;
+  border: 1px solid rgba(255, 186, 186, 0.4);
+  background: rgba(22, 18, 27, 0.9);
+  color: #ffecec;
+  font-family: "Orbitron", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 10px 14px;
+  min-width: 150px;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.vault-fail-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 220, 220, 0.75);
+  box-shadow: 0 0 14px rgba(255, 142, 142, 0.24);
+}
+
+.vault-fail-btn.primary {
+  border-color: rgba(255, 216, 132, 0.7);
+  background: linear-gradient(120deg, rgba(88, 42, 8, 0.95), rgba(42, 14, 9, 0.92));
+  color: #ffe6b5;
+}
 @media (max-width: 900px) {
   .top-hud {
     gap: 0;
@@ -620,11 +797,23 @@ body {
     gap: 8px;
     font-size: 9px;
   }
+
+  .bottom-right-hud {
+    right: 10px;
+    bottom: 12px;
+    width: min(250px, calc(100vw - 20px));
+  }
+
+  .vault-status-hud,
+  .shield-regen-hud {
+    padding: 8px 10px;
+  }
 }
 
 #game-container {
   filter: brightness(80%) contrast(100%) saturate(100%);
 }
+
 
 
 

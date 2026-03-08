@@ -4,13 +4,16 @@ export default function HUD({
   score = 0,
   enemyCount = 0,
   shieldPercent = 100,
-  powerLevel = 80,
+  vaultPercent = 100,
+  shieldRegenPercent = 0,
+  showShieldRegen = false,
+  showVaultHud = false,
 }) {
-  // Determine power fill color based on level
+  // Determine vault fill color based on level
   let powerFillClass = "power-fill-green";
-  if (powerLevel <= 40) {
+  if (vaultPercent <= 40) {
     powerFillClass = "power-fill-red";
-  } else if (powerLevel < 70) {
+  } else if (vaultPercent < 70) {
     powerFillClass = "power-fill-yellow";
   }
 
@@ -31,12 +34,12 @@ export default function HUD({
               <div
                 className={`vault-fill ${powerFillClass}`}
                 style={{
-                  width: `${powerLevel}%`,
+                  width: `${vaultPercent}%`,
                   transition: "width 700ms ease, background-color 300ms ease",
                 }}
               />
             </div>
-            <span>{powerLevel}%</span>
+            <span>{vaultPercent}%</span>
           </div>
         </div>
 
@@ -94,6 +97,36 @@ export default function HUD({
           </div>
         </div>
       </div>
+
+      {showShieldRegen || showVaultHud ? (
+        <div className="bottom-right-hud">
+          {showVaultHud ? (
+            <div className="vault-status-hud">
+              <div className="vault-status-title">VAULT INTEGRITY</div>
+              <div className="vault-status-track">
+                <div
+                  className="vault-status-fill"
+                  style={{ width: `${vaultPercent}%` }}
+                />
+              </div>
+              <div className="vault-status-value">{vaultPercent}%</div>
+            </div>
+          ) : null}
+
+          {showShieldRegen ? (
+            <div className="shield-regen-hud">
+              <div className="shield-regen-title">SHIELD REGENERATION</div>
+              <div className="shield-regen-track">
+                <div
+                  className="shield-regen-fill"
+                  style={{ width: `${shieldRegenPercent}%` }}
+                />
+              </div>
+              <div className="shield-regen-value">{shieldRegenPercent}%</div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="film-grain"></div>
     </>

@@ -94,9 +94,8 @@ function ensureAttackState(ship) {
 
 export function updateShipAttack(ship, delta, shield) {
   ensureAttackState(ship);
- 
 
-  // If ship not alive → remove beam completely
+  // If ship not alive -> remove beam completely
   if (!ship.mesh || ship.state !== "alive") {
     removeBeam(ship);
     return;
@@ -109,23 +108,27 @@ export function updateShipAttack(ship, delta, shield) {
   const isMoving = ship.isMoving === true;
 
   if (isMoving) {
-  removeBeam(ship);
-  ship.isFiring = false;
-  ship.fireTimer = 0;
-  return;
-}
-
+    removeBeam(ship);
+    ship.isFiring = false;
+    ship.fireTimer = 0;
+    return;
+  }
 
   // If currently firing
   if (ship.isFiring) {
     ship.fireTimer -= deltaSeconds;
     ship.beamFxTime += deltaSeconds;
 
-     // ONLY damage while beam exists
-  if (ship.beam) {
-    shield.takeDamage(getDamage(ship.type) * deltaSeconds);
-    updateElectricBeam(ship.beam, ship.beamFxTime);
-  }
+    // Only damage while beam exists.
+    if (ship.beam) {
+      const damage = getDamage(ship.type) * deltaSeconds;
+      if (!shield.isDestroyed) {
+        shield.takeDamage(damage);
+      } else if (typeof shield.takeFallbackDamage === "function") {
+        shield.takeFallbackDamage(damage);
+      }
+      updateElectricBeam(ship.beam, ship.beamFxTime);
+    }
 
     if (ship.fireTimer <= 0) {
       removeBeam(ship);
@@ -141,18 +144,17 @@ export function updateShipAttack(ship, delta, shield) {
 
   if (ship.attackCooldown <= 0) {
     createBeam(ship, shield);
-   // 🔴 GLOW ON STRIKE (only once)
-  shield.material.emissive.set(0xff0000);
-  shield.material.emissiveIntensity = 3.0;
-  shield.hitFlashTimer = 0.15;
+    // Flash shield only while shield is active.
+    if (!shield.isDestroyed && shield.material) {
+      shield.material.emissive.set(0xff0000);
+      shield.material.emissiveIntensity = 3.0;
+      shield.hitFlashTimer = 0.15;
+    }
 
-  ship.fireTimer = 0.6;
-  ship.isFiring = true;
-
-    
+    ship.fireTimer = 0.6;
+    ship.isFiring = true;
   }
 }
-
 // ================= CREATE BEAM =================
 
 function createBeam(ship, shield) {
@@ -317,3 +319,4 @@ function getDamage(type) {
   if (type === 3) return 25;
   return 5;
 }
+
