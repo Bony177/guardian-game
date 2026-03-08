@@ -1838,7 +1838,6 @@ function Scene({ onBackHome, onPlayAgain }) {
         vaultPercent={vaultPercent}
         shieldRegenPercent={shieldRegenPercent}
         showShieldRegen={showShieldDownHud}
-        showVaultHud={showShieldDownHud}
       />
       <div
         ref={mountRef}

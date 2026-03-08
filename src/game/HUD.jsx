@@ -7,7 +7,6 @@ export default function HUD({
   vaultPercent = 100,
   shieldRegenPercent = 0,
   showShieldRegen = false,
-  showVaultHud = false,
 }) {
   // Determine vault fill color based on level
   let powerFillClass = "power-fill-green";
@@ -22,6 +21,10 @@ export default function HUD({
 
   // Format enemy count with zero padding
   const formattedEnemyCount = enemyCount.toString().padStart(2, "0");
+  const isShieldRegenMode = showShieldRegen;
+  const displayedShieldPercent = isShieldRegenMode
+    ? shieldRegenPercent
+    : shieldPercent;
 
   return (
     <>
@@ -60,19 +63,6 @@ export default function HUD({
           <div className="enemy-count">ENEMIES : {formattedEnemyCount}</div>
         </div>
 
-        <div className="shield-status">
-          <span className="shield-label">SHIELD</span>
-          <div className="shield-track">
-            <div
-              className="shield-fill"
-              style={{
-                width: `${shieldPercent}%`,
-              }}
-            />
-          </div>
-          <span className="shield-value">{shieldPercent}%</span>
-        </div>
-
         <div className="radar-body">
           <div className="grid"></div>
           <div className="scan-line"></div>
@@ -88,7 +78,7 @@ export default function HUD({
           </div>
 
           <div className="range">
-            <span>⚠ RANGE</span>
+            <span></span>
             <div className="range-bars">
               <div></div>
               <div></div>
@@ -98,35 +88,35 @@ export default function HUD({
         </div>
       </div>
 
-      {showShieldRegen || showVaultHud ? (
-        <div className="bottom-right-hud">
-          {showVaultHud ? (
-            <div className="vault-status-hud">
-              <div className="vault-status-title">VAULT INTEGRITY</div>
-              <div className="vault-status-track">
-                <div
-                  className="vault-status-fill"
-                  style={{ width: `${vaultPercent}%` }}
-                />
-              </div>
-              <div className="vault-status-value">{vaultPercent}%</div>
-            </div>
-          ) : null}
-
-          {showShieldRegen ? (
-            <div className="shield-regen-hud">
-              <div className="shield-regen-title">SHIELD REGENERATION</div>
-              <div className="shield-regen-track">
-                <div
-                  className="shield-regen-fill"
-                  style={{ width: `${shieldRegenPercent}%` }}
-                />
-              </div>
-              <div className="shield-regen-value">{shieldRegenPercent}%</div>
-            </div>
-          ) : null}
+      <div className="bottom-right-hud">
+        <div className="vault-status-hud">
+          <div className="vault-status-title">VAULT INTEGRITY</div>
+          <div className="vault-status-track">
+            <div
+              className="vault-status-fill"
+              style={{ width: `${vaultPercent}%` }}
+            />
+          </div>
+          <div className="vault-status-value">{vaultPercent}%</div>
         </div>
-      ) : null}
+
+        <div
+          className={`shield-status-hud ${
+            isShieldRegenMode ? "regen-mode" : "health-mode"
+          }`}
+        >
+          <div className="shield-status-title">
+            {isShieldRegenMode ? "SHIELD REGENERATION" : "SHIELD HEALTH"}
+          </div>
+          <div className="shield-status-track">
+            <div
+              className="shield-status-fill"
+              style={{ width: `${displayedShieldPercent}%` }}
+            />
+          </div>
+          <div className="shield-status-value">{displayedShieldPercent}%</div>
+        </div>
+      </div>
 
       <div className="film-grain"></div>
     </>
