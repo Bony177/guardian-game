@@ -922,3 +922,74 @@ body {
 .hud-box::before{
   display: none !important;
 }
+.signal-module{
+  position: fixed;
+  left: 1390px;
+  bottom: 300px;
+
+  display: flex;
+  gap: 70px;
+
+  font-family: "Orbitron", sans-serif;
+  color: #65f3ff;
+
+  opacity: 0.25;
+  z-index: 20;
+
+  pointer-events: none;
+}
+.signal-graph{
+  min-width: 240px;
+}
+
+.signal-title{
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+
+/*.signal-lines{
+  font-size: 18px;
+  letter-spacing: 4px;
+
+  color: #65f3ff;
+
+  text-shadow:
+    0 0 6px rgba(101,243,255,0.7),
+    0 0 14px rgba(101,243,255,0.3);
+}*/
+.coordinate-data{
+  min-width: 200px;
+  transform: translate(-350px, 150px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  text-align: left;
+
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #9ef6ff;
+  gap: 4px;
+}
+
+.coord-title{
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+  color: #65f3ff;
+}
+
+.coord-gap{
+  height: 6px;
+}
+.coordinate-data div{
+  animation: dataFlicker 1.4s infinite alternate;
+}
+
+@keyframes dataFlicker{
+  from{opacity:0.7}
+  to{opacity:1}
+}

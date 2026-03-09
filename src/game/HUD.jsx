@@ -1,4 +1,5 @@
 import "../index.css";
+import { useState, useEffect } from "react";
 
 export default function HUD({
   score = 0,
@@ -16,6 +17,31 @@ export default function HUD({
   } else if (vaultPercent < 70) {
     powerFillClass = "power-fill-yellow";
   }
+  const graphChars = ["▁", "▂", "▃", "▄", "▅", "▆", "▇"];
+
+  const generateGraph = () => {
+    let line = "";
+    for (let i = 0; i < 8; i++) {
+      line += graphChars[Math.floor(Math.random() * graphChars.length)];
+    }
+    return line;
+  };
+
+  const randomCoord = () => (Math.random() * 4000 - 2000).toFixed(2);
+
+  const [coords, setCoords] = useState({
+    x: randomCoord(),
+    y: randomCoord(),
+    z: randomCoord(),
+    drift: Math.random().toFixed(3),
+    trajectory: (Math.random() * 90).toFixed(1),
+  });
+
+  const [graphLines, setGraphLines] = useState([
+    generateGraph(),
+    generateGraph(),
+    generateGraph(),
+  ]);
 
   const scoreDigits = Math.max(0, Math.round(score))
     .toString()
@@ -34,17 +60,45 @@ export default function HUD({
   const displayedShieldPercent = isShieldRegenMode
     ? shieldRegenPercent
     : shieldPercent;
+  useEffect(() => {
+    const coordInterval = setInterval(() => {
+      setCoords({
+        x: randomCoord(),
+        y: randomCoord(),
+        z: randomCoord(),
+        drift: Math.random().toFixed(3),
+        trajectory: (Math.random() * 90).toFixed(1),
+      });
+    }, 500);
+
+    const graphInterval = setInterval(() => {
+      setGraphLines([generateGraph(), generateGraph(), generateGraph()]);
+    }, 200);
+
+    return () => {
+      clearInterval(coordInterval);
+      clearInterval(graphInterval);
+    };
+  }, []);
 
   return (
     <>
       <div className="hud-decor-layer" aria-hidden="true">
-        <img src="/textures/uphud.png" alt="" className="hud-decor hud-decor-up" />
+        <img
+          src="/textures/uphud.png"
+          alt=""
+          className="hud-decor hud-decor-up"
+        />
         <img
           src="/textures/centre.png"
           alt=""
           className="hud-decor hud-decor-centre"
         />
-        <img src="/textures/lowhud.png" alt="" className="hud-decor hud-decor-low" />
+        <img
+          src="/textures/lowhud.png"
+          alt=""
+          className="hud-decor hud-decor-low"
+        />
       </div>
 
       {/* TOP HUD */}
@@ -122,7 +176,33 @@ export default function HUD({
           </div>
         </div>
       </div>
+      {/* SIGNAL + COORD PANEL */}
+      <div className="signal-module">
+        <div className="signal-graph">
+          <div className="signal-title">SIGNAL GRAPH</div>
+          <div className="signal-lines">
+            {graphLines[0]}
+            <br />
+            {graphLines[1]}
+            <br />
+            {graphLines[2]}
+          </div>
+        </div>
 
+        <div className="coordinate-data">
+          <div className="coord-title">COORDINATE DATA</div>
+
+          <div>X : {coords.x}</div>
+          <div>Y : {coords.y}</div>
+          <div>Z : {coords.z}</div>
+
+          <div className="coord-gap"></div>
+
+          <div>TARGET : LOCKED</div>
+          <div>TRAJECTORY : {coords.trajectory}°</div>
+          <div>DRIFT : {coords.drift}</div>
+        </div>
+      </div>
       <div className="bottom-right-hud">
         <div className="vault-status-hud">
           <div className="vault-status-title">VAULT INTEGRITY</div>
