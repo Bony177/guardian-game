@@ -2,6 +2,16 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+  --hud-up-opacity: 0.13;
+  --hud-up-top: 0px;
+  --hud-up-x: -50%;
+  --hud-up-y: 0px;
+  --hud-up-width: 1600px;
+  --hud-low-opacity: 0.22;
+  --hud-low-bottom: 0px;
+  --hud-low-x: -50%;
+  --hud-low-y: 0px;
+  --hud-low-width: 1600px;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -70,6 +80,37 @@ body {
   background: #000;
   margin: 0;
   font-family: 'Orbitron', sans-serif;
+}
+
+.hud-decor-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.hud-decor {
+  position: fixed;
+  left: 50%;
+  display: block;
+  height: auto;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hud-decor-up {
+  top: var(--hud-up-top);
+  width: var(--hud-up-width);
+  opacity: var(--hud-up-opacity);
+  transform: translate(var(--hud-up-x), var(--hud-up-y));
+}
+
+.hud-decor-low {
+  bottom: var(--hud-low-bottom);
+  width: var(--hud-low-width);
+  opacity: var(--hud-low-opacity);
+  transform: translate(var(--hud-low-x), var(--hud-low-y));
 }
 
 /* Panel Container */
@@ -808,14 +849,14 @@ body {
 
   backdrop-filter: blur(8px);
 
-  background:
+  /*background:
     linear-gradient(
       to top,
       rgba(4,10,18,0.96) 0%,
       rgba(4,10,18,0.86) 35%,
       rgba(4,10,18,0.55) 65%,
       rgba(4,10,18,0.0) 100%
-    );
+    );/
 
   border-top: 1px solid rgba(0,200,255,0.25);
 
@@ -823,7 +864,7 @@ body {
     0 -20px 60px rgba(0,0,0,0.8),
     inset 0 10px 30px rgba(0,200,255,0.05);
 
-  /* 👇 THIS MAKES THE ANGLED SHAPE */
+  /* 👇 THIS MAKES THE ANGLED SHAPE 
  clip-path: polygon(
   0% 40%,
   22% 40%,
@@ -833,7 +874,7 @@ body {
   100% 40%,
   100% 100%,
   0% 100%
-);
+);*/
 }
 
 .bottom-dashboard::before{
