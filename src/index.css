@@ -961,13 +961,13 @@ body {
 }*/
 .coordinate-data{
   min-width: 200px;
-  transform: translate(-350px, 150px);
+  transform: translate(-383px, 150px);
 
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 
-  text-align: left;
+  text-align: right;
 
   font-size: 12px;
   letter-spacing: 1px;
@@ -986,6 +986,8 @@ body {
   height: 6px;
 }
 .coordinate-data div{
+  width: 100%;
+  text-align: right !important;
   animation: dataFlicker 1.4s infinite alternate;
 }
 
