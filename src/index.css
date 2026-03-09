@@ -12,6 +12,10 @@
   --hud-low-x: -50%;
   --hud-low-y: 0px;
   --hud-low-width: 1600px;
+  --hud-centre-opacity: 0.35;
+  --hud-centre-width: min(760px, 56vw);
+  --hud-centre-x: 0px;
+  --hud-centre-y: 0px;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -111,6 +115,16 @@ body {
   width: var(--hud-low-width);
   opacity: var(--hud-low-opacity);
   transform: translate(var(--hud-low-x), var(--hud-low-y));
+}
+
+.hud-decor-centre {
+  top: 55%;
+  width: 1200px;
+  opacity: 0.17;
+  transform: translate(
+    calc(-50% + var(--hud-centre-x)),
+    calc(-50% + var(--hud-centre-y))
+  );
 }
 
 /* Panel Container */

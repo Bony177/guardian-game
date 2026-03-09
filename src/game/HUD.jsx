@@ -39,6 +39,11 @@ export default function HUD({
     <>
       <div className="hud-decor-layer" aria-hidden="true">
         <img src="/textures/uphud.png" alt="" className="hud-decor hud-decor-up" />
+        <img
+          src="/textures/centre.png"
+          alt=""
+          className="hud-decor hud-decor-centre"
+        />
         <img src="/textures/lowhud.png" alt="" className="hud-decor hud-decor-low" />
       </div>
 
