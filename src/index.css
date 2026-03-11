@@ -728,6 +728,52 @@ body {
   backdrop-filter: blur(6px);
 }
 
+.mission-complete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 8, 20, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.mission-complete-card {
+  width: min(560px, calc(100vw - 36px));
+  border: 1px solid rgba(114, 237, 255, 0.6);
+  background: linear-gradient(
+    160deg,
+    rgba(7, 25, 40, 0.95),
+    rgba(3, 13, 26, 0.94)
+  );
+  box-shadow:
+    0 0 40px rgba(47, 191, 255, 0.24),
+    inset 0 0 32px rgba(94, 223, 255, 0.11);
+  padding: 28px 30px;
+  font-family: "Orbitron", sans-serif;
+  color: #e5fcff;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mission-complete-card h2 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 44px);
+  color: #8af2ff;
+  text-shadow: 0 0 20px rgba(56, 220, 255, 0.4);
+}
+
+.mission-complete-card p {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.mission-complete-copy {
+  color: #c9f8ff;
+  line-height: 1.6;
+}
+
 .vault-fail-card {
   width: min(460px, calc(100vw - 36px));
   border: 1px solid rgba(255, 91, 91, 0.55);

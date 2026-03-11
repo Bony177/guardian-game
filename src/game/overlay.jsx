@@ -3,7 +3,15 @@ import { useEffect, useState } from "react";
 import ShipViewer from "./ShipViewer";
 import ArmoryViewer from "./ArmoryViewer";
 
-const POPUP_OVERLAYS = ["home", "news", "factions", "community"];
+const POPUP_OVERLAYS = [
+  "home",
+  "updates",
+  "about",
+  "contact",
+  "news",
+  "factions",
+  "community",
+];
 const FULLSCREEN_OVERLAYS = ["missions", "armory", "hangar"];
 const MAP_SLIDE = {
   heading: "SECTOR ECLIPSE-7",
@@ -147,19 +155,51 @@ another piece of Earth is harvested.`,
 const OVERLAY_CONTENT = {
   home: {
     title: "HOME",
-    content: "Welcome back to the command center.",
+    subtitle: "Command Overview",
+    paragraphs: [
+      "Welcome back, Commander. Eclipse-7 remains operational and all defense systems are currently online.",
+      "Use the mission panels below to review active sectors, ship readiness, and weapons status before deployment.",
+    ],
+  },
+  updates: {
+    title: "UPDATES",
+    subtitle: "Patch Notes // Build 0.9.4",
+    paragraphs: [
+      "Stability improvements applied to turret response, enemy flight paths, and target lock behavior.",
+      "HUD readability improved for tactical values, system warnings, and mission outcome overlays.",
+    ],
+  },
+  about: {
+    title: "ABOUT",
+    subtitle: "Signal Breach Program",
+    paragraphs: [
+      "Signal Breach is a defensive command simulation set during the final resistance phase on Earth.",
+      "You operate settlement defense towers to intercept hostile fleets and protect surviving human sectors.",
+    ],
+  },
+  contact: {
+    title: "CONTACT",
+    subtitle: "Transmission Relay",
+    paragraphs: [
+      "Command Uplink: contact@signalbreach.example",
+      "Ops Channel: +1 (555) 014-7788",
+      "Sector Grid: New Anchorage, Earth Defense Network",
+    ],
   },
   news: {
-    title: "NEWS",
-    content: "Check back for the latest updates and announcements.",
+    title: "NEWS ARCHIVE",
+    subtitle: "Legacy Feed",
+    paragraphs: ["Archived battlefield news and campaign logs are being synchronized."],
   },
   factions: {
     title: "FACTIONS",
-    content: "Choose your faction and rise through the ranks.",
+    subtitle: "Legacy Entry",
+    paragraphs: ["Faction alignment data has been migrated to mission command modules."],
   },
   community: {
     title: "COMMUNITY",
-    content: "Join our community and connect with other players.",
+    subtitle: "Legacy Entry",
+    paragraphs: ["Community relay channel will be available in a future release."],
   },
   missions: {
     title: "MISSIONS",
@@ -194,18 +234,36 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
   const overlayKey = isFullscreen
     ? currentTab.toLowerCase().replace(" ", "-")
     : activeOverlay.toLowerCase();
-  const data = OVERLAY_CONTENT[overlayKey] || OVERLAY_CONTENT[activeOverlay];
+  const data = OVERLAY_CONTENT[overlayKey] ||
+    OVERLAY_CONTENT[activeOverlay] || {
+      title: String(activeOverlay || "Overlay").toUpperCase(),
+      subtitle: "No data configured",
+      paragraphs: ["Add content in src/game/overlay.jsx (OVERLAY_CONTENT)."],
+    };
 
   if (isPopup) {
+    const paragraphs = Array.isArray(data.paragraphs)
+      ? data.paragraphs
+      : data.content
+        ? [data.content]
+        : [];
+
     return (
       <div className="overlay-popup">
-        <div className="overlay-modal">
+        <div className={`overlay-modal overlay-modal-${activeOverlay}`}>
           <button className="close-btn" onClick={closeOverlay}>
             X
           </button>
           <div className="overlay-content">
             <h2>{data.title}</h2>
-            <p>{data.content}</p>
+            {data.subtitle ? (
+              <p className="overlay-subtitle">{data.subtitle}</p>
+            ) : null}
+            {paragraphs.map((paragraph, index) => (
+              <p key={`${activeOverlay}-paragraph-${index}`} className="overlay-paragraph">
+                {paragraph}
+              </p>
+            ))}
           </div>
         </div>
       </div>

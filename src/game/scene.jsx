@@ -17,6 +17,7 @@ import {
   stopShipsSession,
   resetShips,
   setShipDestroyedCallback,
+  setMaxShipsPerSession,
 } from "./ships";
 import { createShield } from "./shield";
 
@@ -206,6 +207,15 @@ const BARREL_EXP_DEFAULTS = {
   size: 0.5,
 };
 
+const BARREL_FIRE_TRACE_DEFAULTS = {
+  glowRadius: 0.24,
+  coreRadius: 0.11,
+  radialSegments: 12,
+  lifetimeSeconds: 0.12,
+};
+
+const MISSION_KILL_TARGET = 25;
+
 function Scene({ onBackHome, onPlayAgain }) {
   const mountRef = useRef(null);
   const [score, setScore] = useState(0);
@@ -215,6 +225,7 @@ function Scene({ onBackHome, onPlayAgain }) {
   const [vaultPercent, setVaultPercent] = useState(100);
   const [shieldRegenPercent, setShieldRegenPercent] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [isMissionComplete, setIsMissionComplete] = useState(false);
   const [isSceneLoading, setIsSceneLoading] = useState(true);
   const [sceneLoadingProgress, setSceneLoadingProgress] = useState(0);
   const [sceneLoadingMessage, setSceneLoadingMessage] = useState(
@@ -233,6 +244,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     setVaultPercent(100);
     setShieldRegenPercent(0);
     setIsGameOver(false);
+    setIsMissionComplete(false);
     setSceneLoadingProgress(0);
     setSceneLoadingMessage("Preparing battlefield assets...");
     setIsSceneLoading(true);
@@ -255,6 +267,9 @@ function Scene({ onBackHome, onPlayAgain }) {
     let vaultHealth = 100;
     let shieldRegenValue = 0;
     let gameOverTriggered = false;
+    let missionCompleteTriggered = false;
+    let gameplayEnded = false;
+    let killsTotal = 0;
     const SHIELD_REGEN_RATE_PER_SECOND = 5;
     const VAULT_DAMAGE_MULTIPLIER = 1;
     const activeExplosions = [];
@@ -351,6 +366,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const shipSessionId = startShipsSession();
+    setMaxShipsPerSession(MISSION_KILL_TARGET);
     const scoreByShipType = {
       1: 100,
       2: 200,
@@ -522,7 +538,12 @@ function Scene({ onBackHome, onPlayAgain }) {
 
       const traceGroup = new THREE.Group();
 
-      const glowGeometry = new THREE.CylinderGeometry(0.12, 0.12, length, 10);
+      const glowGeometry = new THREE.CylinderGeometry(
+        BARREL_FIRE_TRACE_DEFAULTS.glowRadius,
+        BARREL_FIRE_TRACE_DEFAULTS.glowRadius,
+        length,
+        BARREL_FIRE_TRACE_DEFAULTS.radialSegments,
+      );
       const glowMaterial = new THREE.MeshBasicMaterial({
         color: 0xff7a00,
         transparent: true,
@@ -534,7 +555,12 @@ function Scene({ onBackHome, onPlayAgain }) {
       glowMesh.renderOrder = 75;
       traceGroup.add(glowMesh);
 
-      const coreGeometry = new THREE.CylinderGeometry(0.05, 0.05, length, 10);
+      const coreGeometry = new THREE.CylinderGeometry(
+        BARREL_FIRE_TRACE_DEFAULTS.coreRadius,
+        BARREL_FIRE_TRACE_DEFAULTS.coreRadius,
+        length,
+        BARREL_FIRE_TRACE_DEFAULTS.radialSegments,
+      );
       const coreMaterial = new THREE.MeshBasicMaterial({
         color: 0xfff6df,
         transparent: true,
@@ -560,7 +586,7 @@ function Scene({ onBackHome, onPlayAgain }) {
         glowMaterial,
         coreMaterial,
         elapsed: 0,
-        lifetime: 0.12,
+        lifetime: BARREL_FIRE_TRACE_DEFAULTS.lifetimeSeconds,
       });
     }
 
@@ -643,7 +669,9 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     const onDoubleClick = (e) => {
-      if (!scene || !camera || disposed) return;
+      if (!scene || !camera || disposed || gameplayEnded || !hasStartedGameplay) {
+        return;
+      }
 
       recoilOffset = 0.2;
       isRecoiling = true;
@@ -1571,8 +1599,44 @@ function Scene({ onBackHome, onPlayAgain }) {
       setShieldRegenPercent(percent);
     }
 
+    function stopRuntimeSystems() {
+      gameplayEnded = true;
+      window.removeEventListener("dblclick", onDoubleClick);
+      window.removeEventListener("mousemove", onMouseMove);
+
+      for (const audio of activeGunfireAudios) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      activeGunfireAudios.length = 0;
+
+      if (bgMusic) {
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+      }
+      bgMusicStarted = false;
+
+      if (shieldBreakAudio) {
+        shieldBreakAudio.pause();
+        shieldBreakAudio.currentTime = 0;
+      }
+
+      if (gunfireAudioBase) {
+        gunfireAudioBase.pause();
+        gunfireAudioBase.currentTime = 0;
+      }
+
+      clearBarrelFireTraces();
+      isRecoiling = false;
+      recoilOffset = 0;
+      barrelExpState.isPlaying = false;
+      for (const sprite of barrelExpSprites) {
+        sprite.visible = false;
+      }
+    }
+
     function triggerGameOver() {
-      if (gameOverTriggered) return;
+      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded) return;
       gameOverTriggered = true;
 
       vaultHealth = 0;
@@ -1585,13 +1649,27 @@ function Scene({ onBackHome, onPlayAgain }) {
       setEnemyCount(0);
       setIsGameOver(true);
 
+      stopRuntimeSystems();
+      setShipDestroyedCallback(null);
+      stopShipsSession(shipSessionId);
+      resetShips();
+    }
+
+    function triggerMissionComplete() {
+      if (missionCompleteTriggered || gameOverTriggered || gameplayEnded) return;
+      missionCompleteTriggered = true;
+
+      setEnemyCount(0);
+      setIsMissionComplete(true);
+
+      stopRuntimeSystems();
       setShipDestroyedCallback(null);
       stopShipsSession(shipSessionId);
       resetShips();
     }
 
     function applyVaultDamage(amount) {
-      if (gameOverTriggered) return;
+      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded) return;
 
       const safeAmount = Number(amount);
       if (!Number.isFinite(safeAmount) || safeAmount <= 0) return;
@@ -1627,26 +1705,31 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     function addScore(shipType) {
-      if (gameOverTriggered) return;
+      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded) return;
       const points = scoreByShipType[shipType] ?? 0;
       if (!points) return;
 
+      killsTotal += 1;
       setScore((prevScore) => prevScore + points);
-      setKillCount((prevKillCount) => prevKillCount + 1);
+      setKillCount(killsTotal);
       showScorePopup(points);
+
+      if (killsTotal >= MISSION_KILL_TARGET) {
+        triggerMissionComplete();
+      }
     }
 
     setShipDestroyedCallback(addScore);
 
     function animate() {
-      if (disposed || gameOverTriggered) return;
+      if (disposed || gameplayEnded) return;
       rafId = window.requestAnimationFrame(animate);
 
       const deltaMs = clock.getDelta() * 1000;
       const deltaSeconds = deltaMs / 1000;
 
       updateShips(camera, scene, deltaMs, shield, shipSessionId);
-      if (gameOverTriggered) return;
+      if (gameplayEnded) return;
       // 🎵 Start music when first ship appears
       if (!bgMusicStarted && getActiveShipCount() > 0) {
         bgMusicStarted = true;
@@ -1807,6 +1890,7 @@ function Scene({ onBackHome, onPlayAgain }) {
       setShipDestroyedCallback(null);
       stopShipsSession(shipSessionId);
       setShipsLoadingManager();
+      setMaxShipsPerSession();
 
       if (rafId !== null) {
         window.cancelAnimationFrame(rafId);
@@ -1941,6 +2025,40 @@ function Scene({ onBackHome, onPlayAgain }) {
                 className="scene-loading-fill"
                 style={{ width: `${safeLoadingPercent}%` }}
               />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {isMissionComplete ? (
+        <div className="mission-complete-overlay">
+          <div className="mission-complete-card">
+            <h2>SECTOR SECURED</h2>
+            <p>Hostile fleet neutralized.</p>
+            <p className="mission-complete-copy">
+              You successfully defended Eclipse-7
+              <br />
+              and protected one of the last human settlements on Earth.
+            </p>
+            <p className="vault-fail-score">SCORE: {score.toLocaleString()}</p>
+            <div className="vault-fail-actions">
+              <button
+                type="button"
+                className="vault-fail-btn secondary"
+                onClick={() => {
+                  if (typeof onBackHome === "function") onBackHome();
+                }}
+              >
+                Back To Home
+              </button>
+              <button
+                type="button"
+                className="vault-fail-btn primary"
+                onClick={() => {
+                  if (typeof onPlayAgain === "function") onPlayAgain();
+                }}
+              >
+                Play Again
+              </button>
             </div>
           </div>
         </div>

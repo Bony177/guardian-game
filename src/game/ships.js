@@ -11,6 +11,8 @@ const modelCache = new Map();
 let inFlightLoads = 0;
 const MAX_CONCURRENT_LOADS = 3;
 let currentSessionId = 0;
+let maxShipsPerSession = Number.POSITIVE_INFINITY;
+let spawnedShipsThisSession = 0;
 
 function loadGLTF(url) {
   // store promise in cache so multiple requests share the same load
@@ -148,6 +150,7 @@ function disposeBeamObject(beam) {
 
 export function startShipsSession() {
   currentSessionId += 1;
+  spawnedShipsThisSession = 0;
   return currentSessionId;
 }
 
@@ -176,6 +179,16 @@ export function resetShips() {
   activeShips.length = 0;
   inFlightLoads = 0;
   spawnTimer = 0;
+  spawnedShipsThisSession = 0;
+}
+
+export function setMaxShipsPerSession(maxShips = Number.POSITIVE_INFINITY) {
+  const parsedMax = Number(maxShips);
+  if (!Number.isFinite(parsedMax) || parsedMax <= 0) {
+    maxShipsPerSession = Number.POSITIVE_INFINITY;
+    return;
+  }
+  maxShipsPerSession = Math.floor(parsedMax);
 }
 
 export function setShipDestroyedCallback(callback) {
@@ -288,6 +301,7 @@ function pickShipType() {
 
 export function spawnShip(scene, camera, sessionId = currentSessionId) {
   if (sessionId !== currentSessionId) return;
+  if (spawnedShipsThisSession >= maxShipsPerSession) return;
 
   const typeId = pickShipType();
   const type = SHIP_TYPES[typeId];
@@ -321,6 +335,7 @@ export function spawnShip(scene, camera, sessionId = currentSessionId) {
   };
 
   activeShips.push(placeholder);
+  spawnedShipsThisSession += 1;
   inFlightLoads++;
 
   loadGLTF(type.model).then((gltf) => {
@@ -391,6 +406,9 @@ const dirToShield = new THREE.Vector3()
     
   }).catch((err) => {
     console.error("Failed to load ship model", err);
+    if (sessionId === currentSessionId) {
+      spawnedShipsThisSession = Math.max(0, spawnedShipsThisSession - 1);
+    }
     // cleanup reservation and placeholder
     const idx = activeShips.indexOf(placeholder);
     if (idx !== -1) activeShips.splice(idx, 1);

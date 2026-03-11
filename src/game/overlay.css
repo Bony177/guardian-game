@@ -5,6 +5,18 @@
 /* ============================= */
 
 .overlay-popup {
+  /* Popup tweak controls:
+     --overlay-popup-offset-x: horizontal move (+ right / - left)
+     --overlay-popup-offset-y: vertical move (+ down / - up)
+     --overlay-popup-width: panel width
+     --overlay-popup-max-height: panel max height
+     --overlay-popup-padding: panel inner padding */
+  --overlay-popup-offset-x: 0px;
+  --overlay-popup-offset-y: 0px;
+  --overlay-popup-width: min(640px, calc(100vw - 32px));
+  --overlay-popup-max-height: calc(100vh - 80px);
+  --overlay-popup-padding: 34px;
+
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.85);
@@ -19,14 +31,74 @@
 .overlay-modal {
   position: relative;
   background: linear-gradient(145deg, #0f1625, #0a101c);
-  border: 1px solid rgba(0, 191, 255, 0.4);
-  padding: 40px;
-  max-width: 500px;
-  width: 90%;
-  text-align: center;
+  border: 0px solid rgba(0, 191, 255, 0.4);
+  padding: var(--overlay-popup-padding);
+  width: var(--overlay-popup-width);
+  max-height: var(--overlay-popup-max-height);
+  overflow-y: auto;
+  text-align: left;
+  transform: translate(
+    var(--overlay-popup-offset-x),
+    var(--overlay-popup-offset-y)
+  );
   box-shadow:
-    0 0 30px rgba(0, 191, 255, 0.25),
+    0 0 30px rgba(0, 0, 0, 0.25),
     inset 0 0 25px rgba(0, 191, 255, 0.08);
+  border-radius: 12px;
+}
+
+.overlay-modal .close-btn {
+  top: 10px;
+  right: 14px;
+  font-size: 18px;
+}
+
+.overlay-content h2 {
+  margin: 0;
+  font-family: "Zen Dots";
+  font-size: clamp(22px, 2.2vw, 30px);
+  letter-spacing: 2px;
+  color: #8cecff;
+  text-shadow: 0 0 12px rgba(0, 200, 255, 0.34);
+}
+
+.overlay-subtitle {
+  margin: 10px 0 0;
+  font-family: "Zen Dots";
+  font-size: 12px;
+  letter-spacing: 1.8px;
+  color: rgba(150, 222, 255, 0.86);
+  text-transform: uppercase;
+}
+
+.overlay-paragraph {
+  margin: 14px 0 0;
+  font-family: "Zen Dots";
+  font-size: 14px;
+  line-height: 1.7;
+  letter-spacing: 0.5px;
+  color: #d7eeff;
+}
+
+/* Per-overlay position/size overrides (edit these directly) */
+.overlay-modal-home {
+  --overlay-popup-offset-x: -20px;
+  --overlay-popup-offset-y: -10px;
+}
+
+.overlay-modal-updates {
+  --overlay-popup-offset-x: 0px;
+  --overlay-popup-offset-y: -20px;
+}
+
+.overlay-modal-about {
+  --overlay-popup-offset-x: 24px;
+  --overlay-popup-offset-y: -8px;
+}
+
+.overlay-modal-contact {
+  --overlay-popup-offset-x: 20px;
+  --overlay-popup-offset-y: 6px;
 }
 
 /* ============================= */
