@@ -13,6 +13,17 @@ body {
 ================================= */
 
 .landing {
+  /* Shield ground sphere tweak values */
+  --shield-sphere-left: 28%;
+  --shield-sphere-bottom: 52px;
+  --shield-sphere-width: 1600Px;
+  --shield-sphere-height: 200px;
+  --shield-sphere-opacity: 1;
+  --shield-sphere-blur: 22px;
+  --shield-sphere-core: rgba(164, 238, 255, 0.95);
+  --shield-sphere-mid: rgba(55, 180, 255, 0.62);
+  --shield-sphere-outer: rgba(10, 98, 206, 0.26);
+
   height: 100vh;
   position: relative;
   font-family: sans-serif;
@@ -174,6 +185,31 @@ body {
   filter: brightness(0.7);
 }
 
+.shield-ground-sphere {
+  position: fixed;
+  left: var(--shield-sphere-left);
+  bottom: var(--shield-sphere-bottom);
+  transform: translateX(-50%);
+  width: var(--shield-sphere-width);
+  height: var(--shield-sphere-height);
+  pointer-events: none;
+  z-index: 2;
+  opacity: var(--shield-sphere-opacity);
+  mix-blend-mode: screen;
+  filter: blur(var(--shield-sphere-blur));
+  background: radial-gradient(
+    ellipse at center,
+    var(--shield-sphere-core) 0%,
+    var(--shield-sphere-mid) 34%,
+    var(--shield-sphere-outer) 58%,
+    rgba(0, 70, 180, 0) 78%
+  );
+  box-shadow:
+    0 0 36px rgba(74, 204, 255, 0.45),
+    0 0 72px rgba(35, 125, 255, 0.28);
+  animation: shieldGroundPulse 6s ease-in-out infinite;
+}
+
 .shield {
   position: fixed;
 
@@ -189,6 +225,17 @@ body {
 
   mix-blend-mode: screen;
   opacity: 1;
+}
+
+@keyframes shieldGroundPulse {
+  0%, 100% {
+    opacity: calc(var(--shield-sphere-opacity) * 0.82);
+    transform: translateX(-50%) scale(0.96);
+  }
+  50% {
+    opacity: var(--shield-sphere-opacity);
+    transform: translateX(-50%) scale(1.03);
+  }
 }
 
 
@@ -214,10 +261,15 @@ body {
   font-family: 'Zen Dots';
   background: none;
   border: none;
+  padding: 0;
   color: white;
   cursor: pointer;
   position: relative;
   transition: 0.3s ease;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 /* Animated underline */
@@ -246,8 +298,23 @@ body {
   margin-right: 20px;
   background: transparent;
   border: none;
+  padding: 0;
   color: white;
   cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.landing .nav-left button:focus,
+.landing .nav-left button:focus-visible,
+.landing .play-now:focus,
+.landing .play-now:focus-visible,
+.close-btn:focus,
+.close-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 
@@ -542,6 +609,10 @@ body {
   font-size: 24px;
   background: none;
   border: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  line-height: 1;
   color: white;
   cursor: pointer;
 }

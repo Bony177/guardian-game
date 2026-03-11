@@ -386,6 +386,7 @@ function Landing({
       </div>
       <div className="atmosphere-global" />
       <div className="atmosphere" />
+      <div className="shield-ground-sphere" aria-hidden="true" />
       <img src="/textures/shield.png" className="shield" />
       <div className="shield-glow-static" />
       <div className="shield-pulse" />
