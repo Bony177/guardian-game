@@ -1,5 +1,5 @@
 import "../index.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function HUD({
   score = 0,
@@ -43,16 +43,19 @@ export default function HUD({
     generateGraph(),
   ]);
 
-  const scoreDigits = Math.max(0, Math.round(score))
+  const scoreValue = Math.max(0, Math.round(score))
     .toString()
     .padStart(6, "0")
-    .slice(-6)
-    .split("");
-  const killDigits = Math.max(0, Math.round(killCount))
+    .slice(-6);
+  const killValue = Math.max(0, Math.round(killCount))
     .toString()
-    .padStart(4, "0")
-    .slice(-4)
-    .split("");
+    .padStart(3, "0")
+    .slice(-3);
+
+  const [scorePulse, setScorePulse] = useState(false);
+  const [killPulse, setKillPulse] = useState(false);
+  const previousScoreRef = useRef(score);
+  const previousKillRef = useRef(killCount);
 
   // Format enemy count with zero padding
   const formattedEnemyCount = enemyCount.toString().padStart(2, "0");
@@ -80,6 +83,30 @@ export default function HUD({
       clearInterval(graphInterval);
     };
   }, []);
+
+  useEffect(() => {
+    if (score === previousScoreRef.current) {
+      return;
+    }
+
+    setScorePulse(true);
+    const timer = setTimeout(() => setScorePulse(false), 480);
+    previousScoreRef.current = score;
+
+    return () => clearTimeout(timer);
+  }, [score]);
+
+  useEffect(() => {
+    if (killCount === previousKillRef.current) {
+      return;
+    }
+
+    setKillPulse(true);
+    const timer = setTimeout(() => setKillPulse(false), 480);
+    previousKillRef.current = killCount;
+
+    return () => clearTimeout(timer);
+  }, [killCount]);
 
   return (
     <>
@@ -121,24 +148,25 @@ export default function HUD({
 
         <div className="hud-box sector-box">SECTOR ECLIPSE-7</div>
 
-        <div className="hud-box score-box">
-          <div className="score-panel">
-            <div className="score-label">SCORE</div>
-            <div className="score-digits">
-              {scoreDigits.map((digit, index) => (
-                <div key={`score-${index}`} className="digit">
-                  {digit}
-                </div>
-              ))}
-            </div>
-            <div className="score-label kill-label">KILLS</div>
-            <div className="score-digits kill-digits">
-              {killDigits.map((digit, index) => (
-                <div key={`kill-${index}`} className="digit">
-                  {digit}
-                </div>
-              ))}
-            </div>
+        <div className="score-box mission-data-readout">
+          <div className="mission-row">
+            <span className="mission-label">SCORE :</span>
+            <span className={`mission-value ${scorePulse ? "is-updated" : ""}`}>
+              {scoreValue}
+            </span>
+          </div>
+
+          <div className="mission-separator" aria-hidden="true" />
+
+          <div className="mission-row">
+            <span className="mission-label">KILLS :</span>
+            <span
+              className={`mission-value mission-value-kill ${
+                killPulse ? "is-updated" : ""
+              }`}
+            >
+              {killValue}
+            </span>
           </div>
         </div>
       </div>
