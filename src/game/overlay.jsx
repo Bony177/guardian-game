@@ -281,6 +281,11 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
     closeOverlay();
   };
 
+  const handleBackdropClick = (event) => {
+    if (event.target !== event.currentTarget) return;
+    handleCloseOverlay();
+  };
+
   const renderCloseButton = () => (
     <button
       className="close-btn overlay-close-btn"
@@ -314,7 +319,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
         : [];
 
     return (
-      <div className="overlay-popup">
+      <div className="overlay-popup" onClick={handleBackdropClick}>
         <div className={`overlay-modal overlay-modal-${activeOverlay}`}>
           {renderCloseButton()}
           <div className="overlay-content">
@@ -338,7 +343,10 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 
   if (activeOverlay === "map") {
     return (
-      <div className="overlay-fullscreen mission-briefing">
+      <div
+        className="overlay-fullscreen mission-briefing"
+        onClick={handleBackdropClick}
+      >
         {renderCloseButton()}
 
         <div className="briefing-container">
@@ -361,7 +369,10 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
   if (isFullscreen) {
     if (activeOverlay === "armory") {
       return (
-        <div className="overlay-fullscreen mission-briefing">
+        <div
+          className="overlay-fullscreen mission-briefing"
+          onClick={handleBackdropClick}
+        >
           {renderCloseButton()}
 
           <div className="briefing-container">
@@ -384,7 +395,10 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
       const slide = SHIP_SLIDES[slideIndex];
 
       return (
-        <div className="overlay-fullscreen mission-briefing">
+        <div
+          className="overlay-fullscreen mission-briefing"
+          onClick={handleBackdropClick}
+        >
           {renderCloseButton()}
 
           <div className="briefing-container">
@@ -431,7 +445,10 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
       const slide = MISSION_SLIDES[slideIndex];
 
       return (
-        <div className="overlay-fullscreen mission-briefing">
+        <div
+          className="overlay-fullscreen mission-briefing"
+          onClick={handleBackdropClick}
+        >
           {renderCloseButton()}
 
           <div className="briefing-container">
@@ -478,7 +495,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
       );
     }
     return (
-      <div className="overlay-fullscreen">
+      <div className="overlay-fullscreen" onClick={handleBackdropClick}>
         {renderCloseButton()}
 
         <div className="overlay-content-fullscreen">
