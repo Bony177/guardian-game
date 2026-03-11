@@ -29,12 +29,14 @@ body {
   --shield-sphere-pulse-scale-max: 1.7;
   --shield-sphere-pulse-opacity-min: 0.86;
 
+  width: 100vw;
   height: 100vh;
   position: relative;
   font-family: sans-serif;
   background: transparent; /* IMPORTANT */
   color: white;
   z-index: 10; /* UI base layer */
+  overflow: hidden;
 }
 
 .loading-screen {
