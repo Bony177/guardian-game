@@ -17,12 +17,17 @@ body {
   --shield-sphere-left: 28%;
   --shield-sphere-bottom: 52px;
   --shield-sphere-width: 1600Px;
-  --shield-sphere-height: 200px;
-  --shield-sphere-opacity: 1;
+  --shield-sphere-height: 150px;
+  --shield-sphere-opacity: 0.58;
   --shield-sphere-blur: 22px;
   --shield-sphere-core: rgba(164, 238, 255, 0.95);
   --shield-sphere-mid: rgba(55, 180, 255, 0.62);
   --shield-sphere-outer: rgba(10, 98, 206, 0.26);
+  --shield-sphere-pulse-duration: 3.2s;
+  --shield-sphere-pulse-ease: ease-in-out;
+  --shield-sphere-pulse-scale-min: 0.985;
+  --shield-sphere-pulse-scale-max: 1.7;
+  --shield-sphere-pulse-opacity-min: 0.86;
 
   height: 100vh;
   position: relative;
@@ -207,7 +212,7 @@ body {
   box-shadow:
     0 0 36px rgba(74, 204, 255, 0.45),
     0 0 72px rgba(35, 125, 255, 0.28);
-  animation: shieldGroundPulse 6s ease-in-out infinite;
+  animation: shieldGroundPulse var(--shield-sphere-pulse-duration) var(--shield-sphere-pulse-ease) infinite;
 }
 
 .shield {
@@ -229,12 +234,12 @@ body {
 
 @keyframes shieldGroundPulse {
   0%, 100% {
-    opacity: calc(var(--shield-sphere-opacity) * 0.82);
-    transform: translateX(-50%) scale(0.96);
+    opacity: calc(var(--shield-sphere-opacity) * var(--shield-sphere-pulse-opacity-min));
+    transform: translateX(-50%) scale(var(--shield-sphere-pulse-scale-min));
   }
   50% {
     opacity: var(--shield-sphere-opacity);
-    transform: translateX(-50%) scale(1.03);
+    transform: translateX(-50%) scale(var(--shield-sphere-pulse-scale-max));
   }
 }
 

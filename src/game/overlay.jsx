@@ -189,17 +189,23 @@ const OVERLAY_CONTENT = {
   news: {
     title: "NEWS ARCHIVE",
     subtitle: "Legacy Feed",
-    paragraphs: ["Archived battlefield news and campaign logs are being synchronized."],
+    paragraphs: [
+      "Archived battlefield news and campaign logs are being synchronized.",
+    ],
   },
   factions: {
     title: "FACTIONS",
     subtitle: "Legacy Entry",
-    paragraphs: ["Faction alignment data has been migrated to mission command modules."],
+    paragraphs: [
+      "Faction alignment data has been migrated to mission command modules.",
+    ],
   },
   community: {
     title: "COMMUNITY",
     subtitle: "Legacy Entry",
-    paragraphs: ["Community relay channel will be available in a future release."],
+    paragraphs: [
+      "Community relay channel will be available in a future release.",
+    ],
   },
   missions: {
     title: "MISSIONS",
@@ -252,7 +258,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
       <div className="overlay-popup">
         <div className={`overlay-modal overlay-modal-${activeOverlay}`}>
           <button className="close-btn" onClick={closeOverlay}>
-            X
+            x
           </button>
           <div className="overlay-content">
             <h2>{data.title}</h2>
@@ -260,7 +266,10 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
               <p className="overlay-subtitle">{data.subtitle}</p>
             ) : null}
             {paragraphs.map((paragraph, index) => (
-              <p key={`${activeOverlay}-paragraph-${index}`} className="overlay-paragraph">
+              <p
+                key={`${activeOverlay}-paragraph-${index}`}
+                className="overlay-paragraph"
+              >
                 {paragraph}
               </p>
             ))}
