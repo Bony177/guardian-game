@@ -47,15 +47,62 @@
   border-radius: 12px;
 }
 
-.overlay-modal .close-btn {
-  top: 10px;
-  right: 14px;
-  font-size: 18px;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  border-radius: 0;
-  box-shadow: none;
+.overlay-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-width: 34px;
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  font-family: "Zen Dots";
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #b9eeff;
+  background: rgba(6, 20, 34, 0.72);
+  border: 1px solid rgba(102, 220, 255, 0.48);
+  border-radius: 8px;
+  box-shadow:
+    0 0 10px rgba(36, 164, 255, 0.24),
+    inset 0 0 10px rgba(59, 190, 255, 0.14);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    color 0.22s ease;
+  z-index: 80;
+}
+
+.overlay-close-btn:hover {
+  color: #eaffff;
+  border-color: rgba(130, 236, 255, 0.95);
+  transform: translateY(-1px) scale(1.03);
+  box-shadow:
+    0 0 16px rgba(87, 218, 255, 0.62),
+    0 0 28px rgba(38, 148, 255, 0.36),
+    inset 0 0 14px rgba(107, 224, 255, 0.24);
+}
+
+.overlay-close-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.overlay-close-btn:focus,
+.overlay-close-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(137, 238, 255, 0.72),
+    0 0 18px rgba(76, 204, 255, 0.52);
+}
+
+.overlay-popup .overlay-close-btn {
+  top: 12px;
+  right: 12px;
+}
+
+.overlay-fullscreen .overlay-close-btn {
+  top: 24px;
+  right: 30px;
 }
 
 .overlay-content h2 {

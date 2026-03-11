@@ -1,5 +1,5 @@
 ﻿import "./overlay.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ShipViewer from "./ShipViewer";
 import ArmoryViewer from "./ArmoryViewer";
 
@@ -225,12 +225,71 @@ const TAB_ORDER = ["MISSIONS", "ARMORY", "SHIP HANGAR"];
 
 function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
   const [slideIndex, setSlideIndex] = useState(0);
+  const overlayHoverAudioRef = useRef(null);
+  const overlayClickAudioRef = useRef(null);
 
   useEffect(() => {
     setSlideIndex(0);
   }, [activeOverlay]);
 
+  useEffect(() => {
+    const hoverAudio = new Audio("/audio/buttonhover.mp3");
+    hoverAudio.preload = "auto";
+    hoverAudio.volume = 0.45;
+
+    const clickAudio = new Audio("/audio/buttonclick.mp3");
+    clickAudio.preload = "auto";
+    clickAudio.volume = 0.55;
+
+    overlayHoverAudioRef.current = hoverAudio;
+    overlayClickAudioRef.current = clickAudio;
+
+    return () => {
+      [hoverAudio, clickAudio].forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+      overlayHoverAudioRef.current = null;
+      overlayClickAudioRef.current = null;
+    };
+  }, []);
+
   if (!activeOverlay) return null;
+
+  const playOverlayHoverSound = () => {
+    const audio = overlayHoverAudioRef.current;
+    if (!audio) return;
+
+    try {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
+  };
+
+  const playOverlayClickSound = () => {
+    const audio = overlayClickAudioRef.current;
+    if (!audio) return;
+
+    try {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
+  };
+
+  const handleCloseOverlay = () => {
+    playOverlayClickSound();
+    closeOverlay();
+  };
+
+  const renderCloseButton = () => (
+    <button
+      className="close-btn overlay-close-btn"
+      onMouseEnter={playOverlayHoverSound}
+      onClick={handleCloseOverlay}
+    >
+      X
+    </button>
+  );
 
   // Determine if it's a modal or fullscreen overlay
   const isPopup = POPUP_OVERLAYS.includes(activeOverlay);
@@ -257,9 +316,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
     return (
       <div className="overlay-popup">
         <div className={`overlay-modal overlay-modal-${activeOverlay}`}>
-          <button className="close-btn" onClick={closeOverlay}>
-            x
-          </button>
+          {renderCloseButton()}
           <div className="overlay-content">
             <h2>{data.title}</h2>
             {data.subtitle ? (
@@ -282,9 +339,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
   if (activeOverlay === "map") {
     return (
       <div className="overlay-fullscreen mission-briefing">
-        <button className="close-btn" onClick={closeOverlay}>
-          X
-        </button>
+        {renderCloseButton()}
 
         <div className="briefing-container">
           <div className="hud-frame"></div>
@@ -307,9 +362,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
     if (activeOverlay === "armory") {
       return (
         <div className="overlay-fullscreen mission-briefing">
-          <button className="close-btn" onClick={closeOverlay}>
-            X
-          </button>
+          {renderCloseButton()}
 
           <div className="briefing-container">
             <div className="hud-frame"></div>
@@ -332,9 +385,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 
       return (
         <div className="overlay-fullscreen mission-briefing">
-          <button className="close-btn" onClick={closeOverlay}>
-            X
-          </button>
+          {renderCloseButton()}
 
           <div className="briefing-container">
             <div className="hud-frame"></div>
@@ -351,18 +402,24 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 
           <div className="briefing-controls">
             <button
-              onClick={() => setSlideIndex((prev) => Math.max(prev - 1, 0))}
+              onMouseEnter={playOverlayHoverSound}
+              onClick={() => {
+                playOverlayClickSound();
+                setSlideIndex((prev) => Math.max(prev - 1, 0));
+              }}
               disabled={slideIndex === 0}
             >
               BACK
             </button>
 
             <button
-              onClick={() =>
+              onMouseEnter={playOverlayHoverSound}
+              onClick={() => {
+                playOverlayClickSound();
                 setSlideIndex((prev) =>
                   Math.min(prev + 1, SHIP_SLIDES.length - 1),
-                )
-              }
+                );
+              }}
             >
               NEXT
             </button>
@@ -375,9 +432,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 
       return (
         <div className="overlay-fullscreen mission-briefing">
-          <button className="close-btn" onClick={closeOverlay}>
-            X
-          </button>
+          {renderCloseButton()}
 
           <div className="briefing-container">
             <div className="hud-frame"></div>
@@ -394,18 +449,24 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 
           <div className="briefing-controls">
             <button
-              onClick={() => setSlideIndex((prev) => Math.max(prev - 1, 0))}
+              onMouseEnter={playOverlayHoverSound}
+              onClick={() => {
+                playOverlayClickSound();
+                setSlideIndex((prev) => Math.max(prev - 1, 0));
+              }}
               disabled={slideIndex === 0}
             >
               BACK
             </button>
 
             <button
+              onMouseEnter={playOverlayHoverSound}
               onClick={() => {
+                playOverlayClickSound();
                 if (slideIndex < MISSION_SLIDES.length - 1) {
                   setSlideIndex((prev) => prev + 1);
                 } else {
-                  closeOverlay();
+                  handleCloseOverlay();
                   // optionally call startGame here
                 }
               }}
@@ -418,9 +479,7 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
     }
     return (
       <div className="overlay-fullscreen">
-        <button className="close-btn" onClick={closeOverlay}>
-          X
-        </button>
+        {renderCloseButton()}
 
         <div className="overlay-content-fullscreen">
           <h1>{data.title}</h1>
@@ -429,14 +488,22 @@ function Overlay({ activeOverlay, closeOverlay, currentTab, handleTabChange }) {
 
         <button
           className="arrow arrow-left"
-          onClick={() => handleTabChange("prev")}
+          onMouseEnter={playOverlayHoverSound}
+          onClick={() => {
+            playOverlayClickSound();
+            handleTabChange("prev");
+          }}
         >
           â—€
         </button>
 
         <button
           className="arrow arrow-right"
-          onClick={() => handleTabChange("next")}
+          onMouseEnter={playOverlayHoverSound}
+          onClick={() => {
+            playOverlayClickSound();
+            handleTabChange("next");
+          }}
         >
           â–¶
         </button>
