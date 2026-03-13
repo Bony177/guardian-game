@@ -215,6 +215,14 @@ const BARREL_FIRE_TRACE_DEFAULTS = {
 };
 
 const MISSION_KILL_TARGET = 25;
+const GAME_AUDIO_VOLUMES = {
+  gunfire: 0.74,
+  backgroundMusic: 0.5,
+  shieldBreak: 0.8,
+  shieldRegenerate: 1,
+  shipDown: 1,
+  gameOver: 0.95,
+};
 
 function Scene({ onBackHome, onPlayAgain }) {
   const mountRef = useRef(null);
@@ -259,6 +267,9 @@ function Scene({ onBackHome, onPlayAgain }) {
     let bgMusic = null;
     let bgMusicStarted = false;
     let shieldBreakAudio = null;
+    let shieldRegenerateAudio = null;
+    let shipDownAudio = null;
+    let gameOverAudio = null;
     let shieldBreakPlayed = false; // prevent multiple plays
     let lastRadarCount = -1;
     let lastShieldPercent = -1;
@@ -271,7 +282,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     let gameplayEnded = false;
     let killsTotal = 0;
     const SHIELD_REGEN_RATE_PER_SECOND = 5;
-    const VAULT_DAMAGE_MULTIPLIER = 1;
+    const VAULT_DAMAGE_MULTIPLIER = 0.7;
     const activeExplosions = [];
     const activeFireTraces = [];
 
@@ -310,7 +321,9 @@ function Scene({ onBackHome, onPlayAgain }) {
       const nextPercent = Math.round(
         THREE.MathUtils.clamp((itemsLoaded / itemsTotal) * 100, 0, 100),
       );
-      setSceneLoadingProgress((prev) => (nextPercent > prev ? nextPercent : prev));
+      setSceneLoadingProgress((prev) =>
+        nextPercent > prev ? nextPercent : prev,
+      );
     }
 
     function tryStartGameplay() {
@@ -411,8 +424,19 @@ function Scene({ onBackHome, onPlayAgain }) {
       if (typeof Audio === "undefined") return;
       gunfireAudioBase = new Audio("/audio/gunfire.m4a");
       gunfireAudioBase.preload = "auto";
-      gunfireAudioBase.volume = 0.74;
+      gunfireAudioBase.volume = GAME_AUDIO_VOLUMES.gunfire;
       gunfireAudioBase.load();
+    }
+
+    function playEffectAudio(audio, label) {
+      if (!audio) return;
+      audio.currentTime = 0;
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch((error) => {
+          console.warn(`Unable to play ${label} audio`, error);
+        });
+      }
     }
 
     function playGunfireAudio() {
@@ -453,7 +477,7 @@ function Scene({ onBackHome, onPlayAgain }) {
 
       bgMusic = new Audio("/audio/waveloom-no-copyright-metal-background.mp3"); // <-- put your song file here
       bgMusic.loop = true;
-      bgMusic.volume = 0.5; // adjust volume
+      bgMusic.volume = GAME_AUDIO_VOLUMES.backgroundMusic;
       bgMusic.preload = "auto";
       bgMusic.load();
     }
@@ -465,11 +489,41 @@ function Scene({ onBackHome, onPlayAgain }) {
 
       shieldBreakAudio = new Audio("/audio/shieldlol.mp3");
       shieldBreakAudio.preload = "auto";
-      shieldBreakAudio.volume = 0.8;
+      shieldBreakAudio.volume = GAME_AUDIO_VOLUMES.shieldBreak;
       shieldBreakAudio.load();
     }
 
+    function initShieldRegenerateAudio() {
+      if (typeof Audio === "undefined") return;
+
+      shieldRegenerateAudio = new Audio("/audio/shield_regenerate.mp3");
+      shieldRegenerateAudio.preload = "auto";
+      shieldRegenerateAudio.volume = GAME_AUDIO_VOLUMES.shieldRegenerate;
+      shieldRegenerateAudio.load();
+    }
+
+    function initShipDownAudio() {
+      if (typeof Audio === "undefined") return;
+
+      shipDownAudio = new Audio("/audio/shipdown.mp3");
+      shipDownAudio.preload = "auto";
+      shipDownAudio.volume = GAME_AUDIO_VOLUMES.shipDown;
+      shipDownAudio.load();
+    }
+
+    function initGameOverAudio() {
+      if (typeof Audio === "undefined") return;
+
+      gameOverAudio = new Audio("/audio/gameover.mp3");
+      gameOverAudio.preload = "auto";
+      gameOverAudio.volume = GAME_AUDIO_VOLUMES.gameOver;
+      gameOverAudio.load();
+    }
+
     initShieldBreakAudio();
+    initShieldRegenerateAudio();
+    initShipDownAudio();
+    initGameOverAudio();
 
     function applyBarrelExpTransforms() {
       if (!barrelExpSprites.length) return;
@@ -669,7 +723,13 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     const onDoubleClick = (e) => {
-      if (!scene || !camera || disposed || gameplayEnded || !hasStartedGameplay) {
+      if (
+        !scene ||
+        !camera ||
+        disposed ||
+        gameplayEnded ||
+        !hasStartedGameplay
+      ) {
         return;
       }
 
@@ -1035,7 +1095,10 @@ function Scene({ onBackHome, onPlayAgain }) {
       { position: new THREE.Vector3(-3, 2, 0), opacity: 0.02, speed: 1.2 },
     ];
     const chimneySmokes = chimneySmokeConfigs.map((config) =>
-      createChimneySmoke(scene, { ...config, textureLoader: managedTextureLoader }),
+      createChimneySmoke(scene, {
+        ...config,
+        textureLoader: managedTextureLoader,
+      }),
     );
     const smokeUnderRenderOrder = RENDER_LAYER.BUILDINGS - 1;
     chimneySmokes.forEach((smokeFx) => {
@@ -1593,7 +1656,9 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     function updateShieldRegenUI() {
-      const percent = Math.round(THREE.MathUtils.clamp(shieldRegenValue, 0, 100));
+      const percent = Math.round(
+        THREE.MathUtils.clamp(shieldRegenValue, 0, 100),
+      );
       if (percent === lastShieldRegenValue) return;
       lastShieldRegenValue = percent;
       setShieldRegenPercent(percent);
@@ -1620,6 +1685,14 @@ function Scene({ onBackHome, onPlayAgain }) {
         shieldBreakAudio.pause();
         shieldBreakAudio.currentTime = 0;
       }
+      if (shieldRegenerateAudio) {
+        shieldRegenerateAudio.pause();
+        shieldRegenerateAudio.currentTime = 0;
+      }
+      if (shipDownAudio) {
+        shipDownAudio.pause();
+        shipDownAudio.currentTime = 0;
+      }
 
       if (gunfireAudioBase) {
         gunfireAudioBase.pause();
@@ -1636,7 +1709,8 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     function triggerGameOver() {
-      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded) return;
+      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded)
+        return;
       gameOverTriggered = true;
 
       vaultHealth = 0;
@@ -1648,6 +1722,7 @@ function Scene({ onBackHome, onPlayAgain }) {
       setShieldRegenPercent(0);
       setEnemyCount(0);
       setIsGameOver(true);
+      playEffectAudio(gameOverAudio, "game over");
 
       stopRuntimeSystems();
       setShipDestroyedCallback(null);
@@ -1656,7 +1731,8 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     function triggerMissionComplete() {
-      if (missionCompleteTriggered || gameOverTriggered || gameplayEnded) return;
+      if (missionCompleteTriggered || gameOverTriggered || gameplayEnded)
+        return;
       missionCompleteTriggered = true;
 
       setEnemyCount(0);
@@ -1669,12 +1745,16 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     function applyVaultDamage(amount) {
-      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded) return;
+      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded)
+        return;
 
       const safeAmount = Number(amount);
       if (!Number.isFinite(safeAmount) || safeAmount <= 0) return;
 
-      vaultHealth = Math.max(0, vaultHealth - safeAmount * VAULT_DAMAGE_MULTIPLIER);
+      vaultHealth = Math.max(
+        0,
+        vaultHealth - safeAmount * VAULT_DAMAGE_MULTIPLIER,
+      );
       updateVaultUI();
 
       if (vaultHealth <= 0) {
@@ -1705,10 +1785,12 @@ function Scene({ onBackHome, onPlayAgain }) {
     }
 
     function addScore(shipType) {
-      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded) return;
+      if (gameOverTriggered || missionCompleteTriggered || gameplayEnded)
+        return;
       const points = scoreByShipType[shipType] ?? 0;
       if (!points) return;
 
+      playEffectAudio(shipDownAudio, "ship down");
       killsTotal += 1;
       setScore((prevScore) => prevScore + points);
       setKillCount(killsTotal);
@@ -1777,6 +1859,7 @@ function Scene({ onBackHome, onPlayAgain }) {
         updateShieldRegenUI();
 
         if (shieldRegenValue >= 100) {
+          playEffectAudio(shieldRegenerateAudio, "shield regenerate");
           if (typeof shield.restore === "function") {
             shield.restore();
           }
@@ -1951,6 +2034,21 @@ function Scene({ onBackHome, onPlayAgain }) {
         shieldBreakAudio.currentTime = 0;
         shieldBreakAudio = null;
       }
+      if (shieldRegenerateAudio) {
+        shieldRegenerateAudio.pause();
+        shieldRegenerateAudio.currentTime = 0;
+        shieldRegenerateAudio = null;
+      }
+      if (shipDownAudio) {
+        shipDownAudio.pause();
+        shipDownAudio.currentTime = 0;
+        shipDownAudio = null;
+      }
+      if (gameOverAudio) {
+        gameOverAudio.pause();
+        gameOverAudio.currentTime = 0;
+        gameOverAudio = null;
+      }
       if (gunfireAudioBase) {
         gunfireAudioBase.pause();
         gunfireAudioBase.currentTime = 0;
@@ -2097,4 +2195,3 @@ function Scene({ onBackHome, onPlayAgain }) {
 }
 
 export default Scene;
-

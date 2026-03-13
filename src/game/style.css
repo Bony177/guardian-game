@@ -253,7 +253,7 @@ body {
 .landing .header {
   display: flex;
   justify-content: space-between;
-  padding: 3px 90px;
+  padding: 10px 105px;
   
   position: relative;
   z-index: 20;
@@ -337,19 +337,24 @@ body {
 
 .landing .title {
   font-family: 'Zen Dots';
-  font-size: 120px;
+  font-size: 140px;
   font-weight: bold;
-  margin-top: 38px;
+  margin-top: 50px;
   margin-left: 35px;
 }
 
 .landing .subtitle {
-  font-size: 20px;
-  margin-top: -80px;
+  font-family: 'Zen Dots';
+  font-size: 15px;
+  margin-top: -95px;
+  color: #ffffff;
+  text-shadow:
+    0 0 8px rgba(24, 101, 149, 0.8),
+    0 0 16px hsla(211, 57%, 50%, 0.5);
   margin-left: 35px;
 }
 .landing .hero-buttons button {
-  margin-top: 40px;
+  margin-top: 10px;
   padding: 60px 60px;
   margin-right: 20px;
   margin-left: 35px;

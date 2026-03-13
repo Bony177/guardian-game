@@ -410,7 +410,10 @@ function Landing({
         <h1 className="title">
           SIGNAL<br></br> BREACH
         </h1>
-        <p className="subtitle">THE SIGNAL BREACHED SOME SHIT BLAH BLAH</p>
+        <p className="subtitle">
+          HIDDEN BENEATH RUINED EARTH, THE LAST SETTLEMENTS <br></br>SURVIVE IN
+          SILENCE. UNTIL A SIGNAL BREACH CALLS THE ENEMY BACK.
+        </p>
 
         <div className="hero-buttons">
           <button
@@ -421,7 +424,7 @@ function Landing({
               setActiveOverlay("missions");
             }}
           >
-            START MISSION
+            STORY MODE
           </button>
 
           <button
