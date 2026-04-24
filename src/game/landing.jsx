@@ -453,7 +453,7 @@ function Landing({
           }}
         >
           <img className="panel-btn-image" src="/textures/GUNPNG.png" alt="" />
-          <span className="panel-btn-label">ARMORY</span>
+          <span className="panel-btn-label">STORY</span>
         </button>
 
         <button
