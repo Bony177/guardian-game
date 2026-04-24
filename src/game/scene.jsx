@@ -260,7 +260,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     let disposed = false;
     let rafId = null;
     let hasStartedGameplay = false;
-    let managerFinished = true;
+    let managerFinished = false;
     let shipsPreloaded = false;
     let loadingFailed = false;
     // 🎵 Background Music
@@ -328,7 +328,7 @@ function Scene({ onBackHome, onPlayAgain }) {
 
     function tryStartGameplay() {
       if (disposed || hasStartedGameplay || loadingFailed) return;
-      if (!managerFinished || !shipsPreloaded) return;
+      if (!managerFinished) return;
 
       hasStartedGameplay = true;
       setSceneLoadingProgress(100);
