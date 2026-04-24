@@ -252,17 +252,20 @@ body {
 
 .landing .header {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
   padding: 10px 105px;
   
   position: relative;
   z-index: 20;
    background: rgba(0, 0, 0, 0.5);  
 }
-.landing .nav-left {
+.nav-left {
   display: flex;
-  align-items: center;
-  gap: 70px;   /* 👈 adjust spacing here */
+  /*align-items: center;*/
+  justify-content: flex-start;   /* start from left */
+  gap: 100px;                    /* space between items */
+  margin-left: 60px;             /* left margin */
 }
 .landing .nav-left button {
   font-family: 'Zen Dots';
@@ -301,23 +304,8 @@ body {
 .landing .nav-left button:hover::after {
   width: 100%;
 }
-.landing .play-now {
-  margin-right: 20px;
-  background: transparent;
-  border: none;
-  padding: 0;
-  color: white;
-  cursor: pointer;
-  outline: none;
-  box-shadow: none;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
 .landing .nav-left button:focus,
 .landing .nav-left button:focus-visible,
-.landing .play-now:focus,
-.landing .play-now:focus-visible,
 .close-btn:focus,
 .close-btn:focus-visible {
   outline: none !important;
@@ -505,6 +493,15 @@ body {
 }
 
 @media (max-width: 820px) {
+  .landing .header {
+    padding: 10px 24px;
+  }
+
+  .landing .nav-left {
+    justify-content: space-evenly;
+    gap: 10px;
+  }
+
   .landing .bottom-panels {
     bottom: 22px;
     gap: 10px;
@@ -559,17 +556,17 @@ body {
 }
 
 .secondary-btn {
-  font-family: 'Zen Dots';
+   font-family: 'Zen Dots';
   text-transform: uppercase;
   font-size: 18px;
   letter-spacing: 2px;
 
   padding: 16px 40px;
-  color: #8fd3ff;
+  color: white;
   cursor: pointer;
+  border: none;
 
-  background: rgba(10, 25, 40, 0.6);
-  border: 1px solid #00bfff;
+  background: linear-gradient(180deg, #ff8c1a, #ff5a00);
 
   /* Same geometry as primary */
   clip-path: polygon(
@@ -797,3 +794,4 @@ body {
   0%   { transform: translateX(0%); }
   100% { transform: translateX(10%); }
 }
+

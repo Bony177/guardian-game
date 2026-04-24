@@ -394,7 +394,6 @@ function Landing({
 
       <Header
         setActiveOverlay={setActiveOverlay}
-        startGame={startGame}
         playHeaderHoverSound={playHeaderHoverSound}
         playHeaderClickSound={playHeaderClickSound}
       />
@@ -402,6 +401,7 @@ function Landing({
       <Overlay
         activeOverlay={activeOverlay}
         closeOverlay={closeOverlay}
+        startGame={startGame}
         currentTab={currentTab}
         handleTabChange={handleTabChange}
       />
@@ -416,17 +416,6 @@ function Landing({
         </p>
 
         <div className="hero-buttons">
-          <button
-            className="primary-btn"
-            onMouseEnter={playHoverSound}
-            onClick={() => {
-              playClickSound();
-              setActiveOverlay("missions");
-            }}
-          >
-            STORY MODE
-          </button>
-
           <button
             className="secondary-btn"
             onMouseEnter={playHoverSound}
@@ -460,7 +449,7 @@ function Landing({
           onMouseEnter={playHoverSound}
           onClick={() => {
             playClickSound();
-            setActiveOverlay("armory");
+            setActiveOverlay("missions");
           }}
         >
           <img className="panel-btn-image" src="/textures/GUNPNG.png" alt="" />

@@ -1,6 +1,5 @@
 function Header({
   setActiveOverlay,
-  startGame,
   playHeaderHoverSound,
   playHeaderClickSound,
 }) {
@@ -48,16 +47,6 @@ function Header({
         </button>
       </div>
 
-      <button
-        className="play-now"
-        onMouseEnter={playHeaderHoverSound}
-        onClick={() => {
-          playHeaderClickSound();
-          startGame();
-        }}
-      >
-        PLAY NOW
-      </button>
     </div>
   );
 }

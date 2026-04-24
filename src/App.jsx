@@ -30,7 +30,7 @@ function App() {
   };
 
   const handleTabChange = (direction) => {
-    const tabs = ["MISSIONS", "ARMORY", "SHIP HANGAR"];
+    const tabs = ["MISSIONS", "SHIP HANGAR"];
     const currentIndex = tabs.indexOf(currentTab);
     let newIndex;
     if (direction === "next") {
