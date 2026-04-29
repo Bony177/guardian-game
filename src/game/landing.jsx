@@ -59,18 +59,18 @@ function Landing({
   useEffect(() => {
     const headerHoverAudio = new Audio("/audio/header-hover.mp3");
     headerHoverAudio.preload = "auto";
-    headerHoverAudio.volume = 0.4; // subtle
+    headerHoverAudio.volume = 1; // subtle
 
     const headerClickAudio = new Audio("/audio/header-click.mp3");
     headerClickAudio.preload = "auto";
-    headerClickAudio.volume = 0.3;
+    headerClickAudio.volume = 0.5;
 
     headerHoverAudioRef.current = headerHoverAudio;
     headerClickAudioRef.current = headerClickAudio;
     const barrelAudio = new Audio("/audio/gunbarrel.m4a");
     const hoverAudio = new Audio("/audio/buttonhover.mp3");
     hoverAudio.preload = "auto";
-    hoverAudio.volume = 0.8;
+    hoverAudio.volume = 0.9;
 
     const clickAudio = new Audio("/audio/buttonclick.mp3");
     clickAudio.preload = "auto";

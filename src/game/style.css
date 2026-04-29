@@ -28,6 +28,8 @@ body {
   --shield-sphere-pulse-scale-min: 0.985;
   --shield-sphere-pulse-scale-max: 1.7;
   --shield-sphere-pulse-opacity-min: 0.86;
+  --hero-title-blur: 0.5px;
+  --hero-subtitle-blur: 0.5px;
 
   width: 100vw;
   height: 100vh;
@@ -329,6 +331,7 @@ body {
   font-weight: bold;
   margin-top: 50px;
   margin-left: 35px;
+  filter: blur(var(--hero-title-blur));
 }
 
 .landing .subtitle {
@@ -336,6 +339,7 @@ body {
   font-size: 15px;
   margin-top: -95px;
   color: #ffffff;
+  filter: blur(var(--hero-subtitle-blur));
   text-shadow:
     0 0 8px rgba(24, 101, 149, 0.8),
     0 0 16px hsla(211, 57%, 50%, 0.5);
