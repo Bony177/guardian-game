@@ -12,8 +12,8 @@ const LIGHTNING_MEDIA_SOURCES = ["/audio/light.mp3"];
 // Higher number = more frequent lightning strikes.
 const LIGHTNING_STRIKE_FREQUENCY = 3;
 // Increase these to make each lightning strike stay visible longer.
-const LIGHTNING_STRIKE_MIN_DURATION_MS = 1500;
-const LIGHTNING_STRIKE_MAX_DURATION_MS = 2200;
+const LIGHTNING_STRIKE_MIN_DURATION_MS = 1000;
+const LIGHTNING_STRIKE_MAX_DURATION_MS = 1900;
 
 function scaleStrikeDelay(delayMs) {
   const frequency = Math.max(LIGHTNING_STRIKE_FREQUENCY, 0.1);

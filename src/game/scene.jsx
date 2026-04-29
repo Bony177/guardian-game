@@ -12,7 +12,6 @@ import {
   getShipMeshes,
   getActiveShipCount,
   preloadShipModels,
-  setShipsLoadingManager,
   startShipsSession,
   stopShipsSession,
   resetShips,
@@ -261,7 +260,6 @@ function Scene({ onBackHome, onPlayAgain }) {
     let rafId = null;
     let hasStartedGameplay = false;
     let managerFinished = false;
-    let shipsPreloaded = false;
     let loadingFailed = false;
     // 🎵 Background Music
     let bgMusic = null;
@@ -1597,19 +1595,10 @@ function Scene({ onBackHome, onPlayAgain }) {
     //loadBuilding("/models/bl5.glb", new THREE.Vector3(4, 3, 4), 4);
     //loadBuilding("/models/bl6.glb", new THREE.Vector3(-4, 3, 4), 5);
 
-    setShipsLoadingManager(loadingManager);
     preloadShipModels()
-      .then(() => {
-        shipsPreloaded = true;
-        if (disposed || loadingFailed) return;
-        setSceneLoadingMessage("Double Tap to Fire...");
-        tryStartGameplay();
-      })
       .catch((error) => {
         if (disposed) return;
-        loadingFailed = true;
-        console.error("Failed to preload ship models", error);
-        setSceneLoadingMessage("Failed to load ship models. Please try again.");
+        console.warn("Ship model preloading will continue on demand", error);
       });
 
     function generateRadarDots(count) {
@@ -1972,7 +1961,6 @@ function Scene({ onBackHome, onPlayAgain }) {
       disposed = true;
       setShipDestroyedCallback(null);
       stopShipsSession(shipSessionId);
-      setShipsLoadingManager();
       setMaxShipsPerSession();
 
       if (rafId !== null) {
