@@ -9,6 +9,22 @@ import { AdditiveBlending, Vector3 } from "three";
 import { LightningStrike } from "three-stdlib";
 
 const LIGHTNING_MEDIA_SOURCES = ["/audio/light.mp3"];
+// Higher number = more frequent lightning strikes.
+const LIGHTNING_STRIKE_FREQUENCY = 3;
+// Increase these to make each lightning strike stay visible longer.
+const LIGHTNING_STRIKE_MIN_DURATION_MS = 1500;
+const LIGHTNING_STRIKE_MAX_DURATION_MS = 2200;
+
+function scaleStrikeDelay(delayMs) {
+  const frequency = Math.max(LIGHTNING_STRIKE_FREQUENCY, 0.1);
+  return delayMs / frequency;
+}
+
+function getStrikeDuration() {
+  const minDuration = Math.max(LIGHTNING_STRIKE_MIN_DURATION_MS, 0);
+  const maxDuration = Math.max(LIGHTNING_STRIKE_MAX_DURATION_MS, minDuration);
+  return minDuration + Math.random() * (maxDuration - minDuration);
+}
 
 async function resolveLightningMediaSource(signal) {
   for (const source of LIGHTNING_MEDIA_SOURCES) {
@@ -136,7 +152,9 @@ export default function SkyLightning({ canPlaySound = false }) {
     let cancelled = false;
 
     const queueNext = (initial = false) => {
-      const nextDelay = initial ? 900 : 20000 + Math.random() * 10000;
+      const nextDelay = initial
+        ? scaleStrikeDelay(900)
+        : scaleStrikeDelay(20000 + Math.random() * 10000);
       launchTimer = window.setTimeout(() => {
         if (cancelled) return;
 
@@ -144,7 +162,7 @@ export default function SkyLightning({ canPlaySound = false }) {
         setActive(true);
         playStrikeMedia();
 
-        const strikeDuration = 900 + Math.random() * 700;
+        const strikeDuration = getStrikeDuration();
         stopTimer = window.setTimeout(() => {
           if (cancelled) return;
           setActive(false);

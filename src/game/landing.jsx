@@ -424,7 +424,7 @@ function Landing({
               startGame();
             }}
           >
-            QUICK PLAY
+            PLAY NOW
           </button>
         </div>
       </div>

@@ -168,11 +168,7 @@ const OVERLAY_CONTENT = {
   contact: {
     title: "CONTACT",
     subtitle: "Transmission Relay",
-    paragraphs: [
-      "Command Uplink: contact@signalbreach.example",
-      "Ops Channel: +1 (555) 014-7788",
-      "Sector Grid: New Anchorage, Earth Defense Network",
-    ],
+    paragraphs: ["Command Uplink: bonybabu61@gmail.com", ,],
   },
   news: {
     title: "NEWS ARCHIVE",

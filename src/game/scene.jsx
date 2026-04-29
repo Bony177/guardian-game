@@ -351,7 +351,7 @@ function Scene({ onBackHome, onPlayAgain }) {
     loadingManager.onStart = (_, itemsLoaded, itemsTotal) => {
       managerFinished = false;
       if (disposed || loadingFailed) return;
-      setSceneLoadingMessage("Loading 3D models...");
+      setSceneLoadingMessage("double tap to fire...");
       updateSceneLoadProgress(itemsLoaded, itemsTotal);
     };
 
@@ -1602,7 +1602,7 @@ function Scene({ onBackHome, onPlayAgain }) {
       .then(() => {
         shipsPreloaded = true;
         if (disposed || loadingFailed) return;
-        setSceneLoadingMessage("Preparing launch...");
+        setSceneLoadingMessage("Double Tap to Fire...");
         tryStartGameplay();
       })
       .catch((error) => {
